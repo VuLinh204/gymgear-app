@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserRole, UserAuthor } from '@/types';
-import { signIn, signUp, signOut, getCurrentUser } from '@/lib/supabaseDB';
+import { signIn, signOut, getCurrentUser } from '@/lib/supabaseDB';
 
 // ─── Context Shape ─────────────────────────────────────────────────────────────
 interface AuthContextType {
