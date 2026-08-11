@@ -25,7 +25,6 @@ export const AuthModal: React.FC = () => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
-  const [regRole, setRegRole] = useState<UserRole>('user');
   const [regTitle, setRegTitle] = useState('');
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
@@ -65,7 +64,7 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    const result = await register(regName, regEmail, regPassword, regRole, regTitle);
+    const result = await register(regName, regEmail, regPassword, 'user', regTitle);
     if (!result.success) {
       setRegError(result.error || 'Đã có lỗi xảy ra.');
     } else {
@@ -265,18 +264,6 @@ export const AuthModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-medium mb-1.5">Loại tài khoản</label>
-                <select
-                  value={regRole}
-                  onChange={(e) => setRegRole(e.target.value as UserRole)}
-                  className="w-full bg-slate-950 text-slate-200 rounded-xl p-2.5 border border-slate-800 focus:border-amber-500 focus:outline-none transition"
-                >
-                  <option value="user">👤 User Thường – Đăng bài, bình luận, book máy</option>
-                  <option value="premium">👑 VIP Premium – Giá sỉ đại lý, huy hiệu, ưu tiên booking</option>
-                </select>
-              </div>
-
-              <div>
                 <label className="block text-slate-300 font-medium mb-1.5">
                   Danh xưng / Vai trò <span className="text-slate-500">(tuỳ chọn)</span>
                 </label>
@@ -287,6 +274,9 @@ export const AuthModal: React.FC = () => {
                   onChange={(e) => setRegTitle(e.target.value)}
                   className="w-full bg-slate-950 text-slate-200 rounded-xl p-2.5 border border-slate-800 focus:border-amber-500 focus:outline-none transition"
                 />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Premium sẽ được cập nhật sau khi bạn mua gói hoặc liên hệ admin.
+                </p>
               </div>
 
               <button type="submit"

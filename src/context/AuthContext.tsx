@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Vui lòng điền đầy đủ Họ tên và Email.' };
     }
     
-    const result = await signUp(email.trim(), password, name.trim(), role, roleTitle);
+    const result = await signUp(email.trim(), password, name.trim(), 'user', roleTitle);
     
     if (result.success) {
       // Sau khi đăng ký thành công, đăng nhập luôn để lấy token
