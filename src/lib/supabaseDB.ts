@@ -254,7 +254,15 @@ export async function signUp(
   role: UserRole = 'user', roleTitle?: string
 ) {
   const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    if (error.message.toLowerCase().includes('rate limit')) {
+      return {
+        success: false,
+        error: 'Đã vượt quá giới hạn gửi email. Vui lòng chờ vài phút rồi thử lại.'
+      };
+    }
+    return { success: false, error: error.message };
+  }
 
   const authId = data.user?.id;
   if (!authId) {
