@@ -85,20 +85,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!name.trim() || !email.trim()) {
       return { success: false, error: 'Vui lòng điền đầy đủ Họ tên và Email.' };
     }
-    
-    const result = await signUp(email.trim(), password, name.trim(), 'user', roleTitle);
-    
-    if (result.success) {
-      // Sau khi đăng ký thành công, đăng nhập luôn để lấy token
-      const loginResult = await signIn(email.trim(), password);
-      if (loginResult.success && loginResult.user) {
-         setCurrentUser(loginResult.user);
-         closeAuthModal();
-         return { success: true, user: loginResult.user };
-      }
-      return { success: true };
+
+    const response = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim(), email: email.trim(), password, roleTitle }),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      return { success: false, error: data.error || 'Đăng ký thất bại. Vui lòng thử lại.' };
     }
-    return { success: false, error: result.error };
+
+    const loginResult = await signIn(email.trim(), password);
+    if (loginResult.success && loginResult.user) {
+      setCurrentUser(loginResult.user);
+      closeAuthModal();
+      return { success: true, user: loginResult.user };
+    }
+
+    return { success: true };
   }, [closeAuthModal]);
 
   // ── Đăng xuất ─────────────────────────────────────────────────────────────────
