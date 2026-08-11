@@ -12,8 +12,8 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: { persistSession: false },
 });
 
-// Danh sách role_title hợp lệ - chỉnh lại cho khớp với hệ thống của bạn
-const ALLOWED_ROLE_TITLES = ['Trainer', 'Member', 'Staff'];
+// Danh sách role_title hợp lệ - phải trùng chính xác với giá trị gửi từ form đăng ký
+const ALLOWED_ROLE_TITLES = ['Huấn luyện viên', 'Hội viên', 'Nhân viên'];
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;

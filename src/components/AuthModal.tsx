@@ -292,15 +292,19 @@ export const AuthModal: React.FC = () => {
                 <label className="block text-slate-300 font-medium mb-1.5">
                   Danh xưng / Vai trò <span className="text-slate-500">(tuỳ chọn)</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="VD: Chủ phòng Gym / HLV Personal Trainer"
+                <select
                   value={regTitle}
-                  onChange={(e) => setRegTitle(e.target.value)}
+                  onChange={(e) => setRegTitle(e.target.value === 'none' ? '' : e.target.value)}
                   className="w-full bg-slate-950 text-slate-200 rounded-xl p-2.5 border border-slate-800 focus:border-amber-500 focus:outline-none transition"
-                />
+                >
+                  <option value="">-- Chọn chức danh --</option>
+                  <option value="Huấn luyện viên">Huấn luyện viên</option>
+                  <option value="Hội viên">Hội viên</option>
+                  <option value="Nhân viên">Nhân viên</option>
+                  <option value="none">Không có</option>
+                </select>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Premium sẽ được cập nhật sau khi bạn mua gói hoặc liên hệ admin.
+                  Chọn một chức danh phù hợp hoặc để mặc định nếu bạn không muốn đặt danh xưng.
                 </p>
               </div>
 
