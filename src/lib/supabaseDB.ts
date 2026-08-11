@@ -1,6 +1,15 @@
 import { supabase } from './supabase';
 import { SocialPost, BookingRequest, UserAuthor, UserRole, PostComment } from '@/types';
 
+async function getCurrentAuthId(): Promise<string | undefined> {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) {
+    console.warn('Unable to resolve current auth user:', error.message);
+    return undefined;
+  }
+  return user?.id;
+}
+
 // ── LẤY POSTS ───────────────────────────────────────────────────────────────
 export async function fetchPosts(currentUserId?: string) {
   const [postsRes, equipRes] = await Promise.all([
@@ -29,11 +38,7 @@ export async function fetchPosts(currentUserId?: string) {
   const commentsData = commentsRes.data || [];
 
   // Lấy auth UID để xác định bài đã like
-  let currentAuthId: string | undefined;
-  if (currentUserId) {
-    const { data: { session } } = await supabase.auth.getSession();
-    currentAuthId = session?.user?.id;
-  }
+  const currentAuthId = await getCurrentAuthId();
 
   // Đếm likes và comments theo post_id
   const likeCountMap: Record<string, number> = {};
@@ -78,8 +83,7 @@ export async function createPost(
 // ── TOGGLE LIKE (TYM) ────────────────────────────────────────────────────────
 export async function toggleLike(postId: string, userId: string): Promise<{ liked: boolean; newCount: number }> {
   // Lấy auth UID của user hiện tại
-  const { data: { session } } = await supabase.auth.getSession();
-  const authId = session?.user?.id;
+  const authId = await getCurrentAuthId();
   if (!authId) return { liked: false, newCount: 0 };
 
   // Kiểm tra xem user đã like chưa (dùng author_id)
