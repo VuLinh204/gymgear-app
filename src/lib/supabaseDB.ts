@@ -134,7 +134,7 @@ export async function fetchCommentsByPost(postId: string): Promise<PostComment[]
     author: {
       id: c.author?.id || '',
       name: c.author?.name || 'Ẩn danh',
-      avatar: c.author?.avatar || 'https://api.dicebear.com/8.x/avataaars/svg?seed=anon',
+      avatar: c.author?.avatar || '/default-avatar.svg',
       role: c.author?.role || 'user',
       roleTitle: c.author?.role_title,
       isVerified: c.author?.is_verified,
@@ -168,7 +168,7 @@ export async function addComment(postId: string, userId: string, content: string
     author: {
       id: data.author?.id || '',
       name: data.author?.name || 'Ẩn danh',
-      avatar: data.author?.avatar || 'https://api.dicebear.com/8.x/avataaars/svg?seed=anon',
+      avatar: data.author?.avatar || '/default-avatar.svg',
       role: data.author?.role || 'user',
       roleTitle: data.author?.role_title,
       isVerified: data.author?.is_verified,

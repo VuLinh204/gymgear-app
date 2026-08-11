@@ -25,7 +25,7 @@ interface AuthContextType {
 const GUEST_USER: UserAuthor = {
   id: 'usr-guest',
   name: 'Khách Vãng Lai',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+  avatar: '/default-avatar.svg',
   role: 'guest',
   roleTitle: 'Chưa đăng nhập',
   isVerified: false,
