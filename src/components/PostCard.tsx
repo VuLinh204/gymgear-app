@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { SocialPost, Equipment, PostComment } from '@/types';
 import {
@@ -49,6 +49,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onViewEquipment, onBoo
   const [newCommentText, setNewCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [bookmarked, setBookmarked] = useState(post.isBookmarked || false);
+
+  useEffect(() => {
+    setLiked(Boolean(post.isLiked));
+    setLikesCount(post.likesCount || 0);
+    setCommentList(post.comments || []);
+    setCommentsCount(post.commentsCount || 0);
+    setBookmarked(Boolean(post.isBookmarked));
+  }, [post.id, post.isLiked, post.likesCount, post.comments, post.commentsCount, post.isBookmarked]);
 
   const handleToggleLike = async () => {
     if (isGuest) { requestAuth('login'); return; }
