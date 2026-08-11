@@ -18,7 +18,7 @@ import { Search } from 'lucide-react';
 
 // ─── Inner layout (inside AuthProvider) ──────────────────────────────────────
 function AppLayout() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, currentUser } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryType>('all');
@@ -33,11 +33,12 @@ function AppLayout() {
 
   useEffect(() => {
     const loadPosts = async () => {
-      const data = await fetchPosts();
+      const userId = currentUser.role !== 'guest' ? currentUser.id : undefined;
+      const data = await fetchPosts(userId);
       setPosts(data);
     };
     loadPosts();
-  }, []);
+  }, [currentUser.id]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {

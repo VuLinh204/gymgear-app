@@ -5,8 +5,9 @@ import { useAuth } from '@/context/AuthContext';
 import { SocialPost, Equipment, PostComment } from '@/types';
 import {
   Star, Heart, MessageSquare, Share2, Bookmark,
-  CalendarCheck, Crown, ShieldCheck, UserCheck, Send, LogIn
+  CalendarCheck, Crown, ShieldCheck, UserCheck, Send, LogIn, Loader2
 } from 'lucide-react';
+import { toggleLike, addComment, fetchCommentsByPost } from '@/lib/supabaseDB';
 
 interface PostCardProps {
   post: SocialPost;
@@ -36,32 +37,65 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onViewEquipment, onBoo
   const { isGuest, currentUser, requestAuth } = useAuth();
 
   const [liked, setLiked] = useState(post.isLiked || false);
-  const [likesCount, setLikesCount] = useState(post.likesCount);
+  const [likesCount, setLikesCount] = useState(post.likesCount || 0);
+  const [likeLoading, setLikeLoading] = useState(false);
+
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentList, setCommentList] = useState<PostComment[]>(post.comments || []);
+  const [commentsLoaded, setCommentsLoaded] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
+
   const [newCommentText, setNewCommentText] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [bookmarked, setBookmarked] = useState(post.isBookmarked || false);
 
-  const handleToggleLike = () => {
+  const handleToggleLike = async () => {
     if (isGuest) { requestAuth('login'); return; }
-    setLiked((prev) => !prev);
-    setLikesCount((prev) => liked ? prev - 1 : prev + 1);
+    if (likeLoading) return;
+    // Optimistic UI update
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    setLikesCount((prev) => wasLiked ? prev - 1 : prev + 1);
+    setLikeLoading(true);
+    try {
+      const result = await toggleLike(post.id, currentUser.id);
+      setLiked(result.liked);
+      setLikesCount(result.newCount);
+    } catch {
+      // Rollback on error
+      setLiked(wasLiked);
+      setLikesCount((prev) => wasLiked ? prev + 1 : prev - 1);
+    } finally {
+      setLikeLoading(false);
+    }
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleToggleComments = async () => {
+    const opening = !commentsOpen;
+    setCommentsOpen(opening);
+    // Load from DB on first open
+    if (opening && !commentsLoaded) {
+      setCommentsLoading(true);
+      const data = await fetchCommentsByPost(post.id);
+      setCommentList(data);
+      setCommentsLoaded(true);
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) { requestAuth('login'); return; }
-    if (!newCommentText.trim()) return;
-
-    const newComment: PostComment = {
-      id: `comm-${Date.now()}`,
-      author: currentUser,
-      content: newCommentText.trim(),
-      createdAt: 'Vừa xong',
-      likesCount: 0,
-    };
-    setCommentList((prev) => [...prev, newComment]);
-    setNewCommentText('');
+    if (!newCommentText.trim() || commentSubmitting) return;
+    setCommentSubmitting(true);
+    const result = await addComment(post.id, currentUser.id, newCommentText.trim());
+    if (result) {
+      setCommentList((prev) => [...prev, result]);
+      setCommentsCount((prev) => prev + 1);
+      setNewCommentText('');
+    }
+    setCommentSubmitting(false);
   };
 
   const handleBookmark = () => {
@@ -167,18 +201,21 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onViewEquipment, onBoo
         <div className="flex items-center gap-5">
           <button
             onClick={handleToggleLike}
-            className={`flex items-center gap-1.5 transition-colors ${liked ? 'text-rose-500 font-bold' : 'hover:text-rose-400'}`}
+            disabled={likeLoading}
+            className={`flex items-center gap-1.5 transition-colors ${liked ? 'text-rose-500 font-bold' : 'hover:text-rose-400'} disabled:opacity-70`}
           >
-            <Heart className={`w-4 h-4 ${liked ? 'fill-rose-500' : ''}`} />
+            {likeLoading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Heart className={`w-4 h-4 ${liked ? 'fill-rose-500' : ''}`} />}
             <span>{likesCount}</span>
           </button>
 
           <button
-            onClick={() => setCommentsOpen(!commentsOpen)}
+            onClick={handleToggleComments}
             className="flex items-center gap-1.5 hover:text-amber-400 transition-colors"
           >
             <MessageSquare className="w-4 h-4 text-amber-400/80" />
-            <span>{commentList.length}</span>
+            <span>{commentsCount}</span>
           </button>
 
           <button className="flex items-center gap-1.5 hover:text-blue-400 transition-colors">
@@ -198,7 +235,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onViewEquipment, onBoo
       {/* ── Comments section ─────────────────────────────────────────────── */}
       {commentsOpen && (
         <div className="pt-3 border-t border-slate-800/80 space-y-3 animate-fadeIn">
-          {commentList.length > 0 ? (
+          {commentsLoading ? (
+            <div className="flex items-center justify-center py-4 gap-2 text-xs text-slate-500">
+              <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+              <span>Đang tải bình luận...</span>
+            </div>
+          ) : commentList.length > 0 ? (
             <div className="space-y-2 text-xs">
               {commentList.map((c) => (
                 <div key={c.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
@@ -240,10 +282,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onViewEquipment, onBoo
               />
               <button
                 type="submit"
-                disabled={!newCommentText.trim()}
+                disabled={!newCommentText.trim() || commentSubmitting}
                 className="p-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold disabled:opacity-40 transition-colors"
               >
-                <Send className="w-3.5 h-3.5" />
+                {commentSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
             </form>
           )}
