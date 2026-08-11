@@ -255,12 +255,22 @@ export async function signUp(
 ) {
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) return { success: false, error: error.message };
-  if (data.user) {
-    const { error: profileError } = await supabase.from('users').insert({
-      auth_id: data.user.id, name, email, role, role_title: roleTitle
-    });
-    if(profileError) return { success: false, error: profileError.message };
+
+  const authId = data.user?.id;
+  if (!authId) {
+    return { success: false, error: 'Đăng ký thất bại. Vui lòng thử lại sau.' };
   }
+
+  const { error: profileError } = await supabase.from('users').insert({
+    auth_id: authId, name, email, role, role_title: roleTitle
+  });
+  if (profileError) {
+    const friendlyMessage = profileError.message.includes('row-level security')
+      ? 'Không thể tạo hồ sơ người dùng. Vui lòng liên hệ admin hoặc thử lại sau.'
+      : 'Đăng ký thất bại. Vui lòng thử lại.';
+    return { success: false, error: friendlyMessage };
+  }
+
   return { success: true };
 }
 

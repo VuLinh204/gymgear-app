@@ -25,6 +25,7 @@ export const AuthModal: React.FC = () => {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPw, setShowRegPw] = useState(false);
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regTitle, setRegTitle] = useState('');
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState('');
@@ -59,14 +60,24 @@ export const AuthModal: React.FC = () => {
     setRegError('');
     setRegSuccess('');
     
+    if (!regName.trim() || !regEmail.trim() || !regPassword.trim() || !regConfirmPassword.trim()) {
+      setRegError('Vui lòng điền đầy đủ tất cả các trường bắt buộc.');
+      return;
+    }
+
     if (regPassword.length < 6) {
       setRegError('Mật khẩu phải có ít nhất 6 ký tự.');
       return;
     }
 
+    if (regPassword !== regConfirmPassword) {
+      setRegError('Mật khẩu và xác nhận mật khẩu phải khớp.');
+      return;
+    }
+
     const result = await register(regName, regEmail, regPassword, 'user', regTitle);
     if (!result.success) {
-      setRegError(result.error || 'Đã có lỗi xảy ra.');
+      setRegError(result.error || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
     } else {
       setRegSuccess(`Đăng ký thành công! Chào mừng ${result.user?.name} 🎉`);
       // AuthContext đã tự đăng nhập và closeAuthModal()
@@ -261,6 +272,20 @@ export const AuthModal: React.FC = () => {
                     {showRegPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1.5 flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  Xác nhận mật khẩu <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type={showRegPw ? 'text' : 'password'} required minLength={6}
+                  placeholder="Nhập lại mật khẩu"
+                  value={regConfirmPassword}
+                  onChange={(e) => { setRegConfirmPassword(e.target.value); setRegError(''); }}
+                  className="w-full bg-slate-950 text-slate-200 rounded-xl p-2.5 pr-10 border border-slate-800 focus:border-amber-500 focus:outline-none transition"
+                />
               </div>
 
               <div>
