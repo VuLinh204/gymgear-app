@@ -1,0 +1,35 @@
+====================================================================
+               DANH SÁCH TÀI KHOẢN & HƯỚNG DẪN DEPLOY VERCEL
+====================================================================
+
+1. DANH SÁCH TÀI KHOẢN ĐĂNG NHẬP MẪU (SUPABASE AUTH)
+--------------------------------------------------------------------
+[1] Tài khoản Admin (Quản trị viên)
+    - Email: khanh@gymgear.vn
+    - Mật khẩu: password123
+    - Chức năng: Toàn quyền truy cập Admin Dashboard, duyệt đơn Booking.
+
+[2] Tài khoản VIP Premium 1
+    - Email: hung@gymgear.vn
+    - Mật khẩu: password123
+    - Chức năng: Đăng bài review chuẩn VIP, huy hiệu vàng.
+
+[3] Tài khoản VIP Premium 2
+    - Email: nam@gymgear.vn
+    - Mật khẩu: password123
+    - Chức năng: Đăng bài review Fitness Influencer.
+
+
+2. THÔNG TIN BIẾN MÔI TRƯỜNG (.ENV) ĐỂ ĐƯA LÊN VERCEL
+--------------------------------------------------------------------
+NEXT_PUBLIC_SUPABASE_URL=https://htwsrvixpvauhhngxzso.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0d3Nydml4cHZhdWhobmd4enNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxOTQ1NjksImV4cCI6MjEwMTc3MDU2OX0.CUmi5xKzLZv5iaOKSivDfiZOWUFW70PJmQZM2_D6kIk
+
+
+3. HƯỚNG DẪN DEPLOY LÊN VERCEL (NẾU DEPLOY QUA GITHUB)
+--------------------------------------------------------------------
+Bước 1: Đẩy (Push) toàn bộ thư mục code này lên GitHub Repository của bạn.
+Bước 2: Truy cập https://vercel.com/new và chọn Repo GitHub vừa tạo.
+Bước 3: Ở mục "Environment Variables", thêm 2 biến môi trường ở Mục 2 ở trên.
+Bước 4: Nhấn nút "Deploy". Vercel sẽ tự động build và cấp domain host miễn phí (VD: your-app.vercel.app).
+====================================================================
