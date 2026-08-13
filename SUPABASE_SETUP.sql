@@ -70,3 +70,29 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "posts_update_own" ON public.posts FOR UPDATE USING (author_id = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- PHẦN 5: BẢNG FOLLOWS (Theo dõi người dùng)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.follows (
+  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  follower_auth UUID NOT NULL, -- auth.uid() of follower
+  following_auth UUID NOT NULL, -- auth.uid() of the user being followed
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (follower_auth, following_auth)
+);
+
+ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "follows_select_own" ON public.follows FOR SELECT USING (follower_auth = auth.uid() OR following_auth = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "follows_insert_auth" ON public.follows FOR INSERT WITH CHECK (follower_auth = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "follows_delete_own" ON public.follows FOR DELETE USING (follower_auth = auth.uid());
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+

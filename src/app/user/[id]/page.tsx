@@ -19,6 +19,8 @@ export default function UserProfilePage() {
   const { currentUser, requestAuth } = useAuth();
 
   const [profileUser, setProfileUser] = useState<UserAuthor | null>(null);
+  const [followersCount, setFollowersCount] = useState<number>(0);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -48,6 +50,17 @@ export default function UserProfilePage() {
         fetchUserById(id),
         fetchUserPosts(id),
       ]);
+
+      // load followers count and follow status
+      try {
+        const resCount = await fetch(`/api/follow?userId=${id}`);
+        const jsonCount = await resCount.json();
+        setFollowersCount(jsonCount.followersCount || 0);
+
+        const resCheck = await fetch(`/api/follow?userId=${id}&check=1`);
+        const jsonCheck = await resCheck.json();
+        setIsFollowing(!!jsonCheck.isFollowing);
+      } catch (e) { /* ignore */ }
 
       if (!user) {
         setNotFound(true);
@@ -134,6 +147,23 @@ export default function UserProfilePage() {
                   </div>
                   <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-800 rounded-xl text-xs text-slate-400 border border-slate-700">
                     <span className="font-bold text-white">{posts.length}</span> bài viết
+                  </div>
+                  <div className="inline-flex items-center gap-2 ml-3">
+                    <div className="px-3 py-1 rounded-xl bg-slate-800 text-sm text-slate-300 border border-slate-700">{followersCount} người theo dõi</div>
+                    <button
+                      onClick={async () => {
+                        if (!currentUser) return requestAuth('login');
+                        try {
+                          const res = await fetch('/api/follow', { method: 'POST', body: JSON.stringify({ targetUserId: id }), headers: { 'Content-Type': 'application/json' } });
+                          const j = await res.json();
+                          setIsFollowing(!!j.following);
+                          setFollowersCount(j.followersCount || followersCount + (j.following ? 1 : -1));
+                        } catch (e) { console.error(e); }
+                      }}
+                      className={`px-4 py-2 rounded-xl font-bold text-sm ${isFollowing ? 'bg-slate-700 text-white border border-slate-600' : 'bg-amber-500 text-slate-950'}`}
+                    >
+                      {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
+                    </button>
                   </div>
                 </div>
               </div>

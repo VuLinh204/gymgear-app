@@ -712,3 +712,43 @@ export async function fetchUserById(userId: string) {
   };
 }
 
+// ── FOLLOW HELPERS ───────────────────────────────────────────────────────
+async function getAuthIdByUserId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase.from('users').select('auth_id').eq('id', userId).single();
+  if (error || !data) return null;
+  return data.auth_id || null;
+}
+
+export async function getFollowersCountByUserId(userId: string): Promise<number> {
+  const authId = await getAuthIdByUserId(userId);
+  if (!authId) return 0;
+  const { count } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_auth', authId);
+  return count || 0;
+}
+
+export async function isFollowingUser(targetUserId: string): Promise<boolean> {
+  const currentAuthId = await getCurrentAuthId();
+  if (!currentAuthId) return false;
+  const targetAuth = await getAuthIdByUserId(targetUserId);
+  if (!targetAuth) return false;
+  const { data, error } = await supabase.from('follows').select('id').eq('follower_auth', currentAuthId).eq('following_auth', targetAuth).maybeSingle();
+  return !!(data && data.id);
+}
+
+export async function toggleFollowUser(targetUserId: string): Promise<{ following: boolean; followersCount: number }> {
+  const currentAuthId = await getCurrentAuthId();
+  if (!currentAuthId) return { following: false, followersCount: 0 };
+  const targetAuth = await getAuthIdByUserId(targetUserId);
+  if (!targetAuth) return { following: false, followersCount: 0 };
+
+  const { data: existing } = await supabase.from('follows').select('id').eq('follower_auth', currentAuthId).eq('following_auth', targetAuth).maybeSingle();
+  if (existing && existing.id) {
+    await supabase.from('follows').delete().eq('id', existing.id);
+  } else {
+    await supabase.from('follows').insert({ follower_auth: currentAuthId, following_auth: targetAuth });
+  }
+
+  const followers = await getFollowersCountByUserId(targetUserId);
+  return { following: !existing, followersCount: followers };
+}
+
