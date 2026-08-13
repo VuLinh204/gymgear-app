@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { fetchEquipments } from '@/lib/supabaseDB';
 import { SocialPost, Equipment } from '@/types';
-import { Image, Star, Dumbbell, Send, Tag, CheckCircle2, Lock, Crown, ShieldCheck, LogIn, User } from 'lucide-react';
+import { Image, Star, Dumbbell, Send, Tag, CheckCircle2, Lock, Crown, ShieldCheck, LogIn, User, Loader2, X } from 'lucide-react';
+import { uploadImage } from '@/lib/supabaseDB';
 
 interface CreatePostCardProps {
   onAddPost: (post: SocialPost) => void;
@@ -17,6 +18,11 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [postedSuccess, setPostedSuccess] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [equipments, setEquipments] = useState<Equipment[]>([]);
 
@@ -24,7 +30,21 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
     fetchEquipments().then(data => setEquipments(data));
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      setIsExpanded(true);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) {
       requestAuth('login');
@@ -32,7 +52,22 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
     }
     if (!content.trim()) return;
 
+    setIsUploading(true);
+    setErrorMessage(null);
+
+    let imageUrl = null;
+    if (imageFile) {
+      imageUrl = await uploadImage(imageFile, 'posts');
+      if (!imageUrl) {
+        setErrorMessage('Tải ảnh lên thất bại! Vui lòng đảm bảo bạn đã tạo bucket "images" và phân quyền (chạy file SUPABASE_STORAGE_SETUP.sql trong SQL Editor).');
+        setIsUploading(false);
+        return;
+      }
+    }
+
     const taggedEquipment = equipments.find((eq) => eq.id === selectedEquipmentId);
+
+    const postImages = imageUrl ? [imageUrl] : (taggedEquipment ? [taggedEquipment.thumbnail] : []);
 
     const newPost: SocialPost = {
       id: `post-${Date.now()}`,
@@ -41,7 +76,7 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
       content,
       rating,
       taggedEquipment,
-      images: taggedEquipment ? [taggedEquipment.thumbnail] : [],
+      images: postImages,
       likesCount: 0,
       commentsCount: 0,
       sharesCount: 0,
@@ -55,6 +90,9 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
     setRating(5);
     setIsExpanded(false);
     setPostedSuccess(true);
+    removeImage();
+    setIsUploading(false);
+    
     setTimeout(() => setPostedSuccess(false), 3000);
   };
 
@@ -85,6 +123,14 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Bài review của <b>{currentUser.name}</b> đã được đăng lên Feed và lưu vào Database!</span>
+        </div>
+      )}
+
+      {/* Error toast */}
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2 animate-fadeIn">
+          <X className="w-4 h-4 shrink-0 cursor-pointer" onClick={() => setErrorMessage(null)} />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -164,29 +210,62 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
                 </select>
               </div>
 
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="relative inline-block mt-2">
+                  <img src={imagePreview} alt="Preview" className="h-24 rounded-lg object-cover border border-slate-700" />
+                  <button 
+                    type="button" 
+                    onClick={removeImage}
+                    className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 hover:text-white rounded-full p-1 border border-slate-700 transition"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Star Rating */}
               <div>
-                <label className="block text-slate-400 font-medium mb-1">Chấm điểm:</label>
-                <div className="flex items-center gap-1 bg-slate-950 p-2 rounded-xl border border-slate-800">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <button
-                      type="button" key={s}
-                      onClick={() => setRating(s)}
-                      className="p-0.5 hover:scale-110 transition-transform"
-                    >
-                      <Star className={`w-4 h-4 ${s <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-600'}`} />
-                    </button>
-                  ))}
-                  <span className="text-amber-400 font-bold ml-1 text-[11px]">{rating}.0/5</span>
+                <label className="block text-slate-400 font-medium mb-1">Chấm điểm (1.0 - 5.0):</label>
+                <div className="flex items-center justify-between gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button
+                        type="button" key={s}
+                        onClick={() => setRating(s)}
+                        className="p-0.5 hover:scale-110 transition-transform cursor-pointer"
+                      >
+                        <Star className={`w-4 h-4 ${s <= Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-600'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+                    <input
+                      type="number"
+                      min="1"
+                      max="5"
+                      step="0.1"
+                      value={rating}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                          setRating(Math.min(5, Math.max(1, parseFloat(val.toFixed(1)))));
+                        }
+                      }}
+                      className="w-12 bg-transparent text-amber-400 font-bold text-xs text-center outline-none"
+                    />
+                    <span className="text-slate-400 text-[11px] font-bold">/ 5 ⭐</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-1">
               <div className="flex items-center gap-3 text-slate-400">
-                <button type="button" className="flex items-center gap-1 hover:text-emerald-400 transition-colors">
+                <label className="flex items-center gap-1 hover:text-emerald-400 transition-colors cursor-pointer">
                   <Image className="w-4 h-4 text-emerald-400" /> Ảnh thực tế
-                </button>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                </label>
                 <button type="button" className="flex items-center gap-1 hover:text-orange-400 transition-colors">
                   <Dumbbell className="w-4 h-4 text-orange-400" /> Thông số
                 </button>
@@ -202,10 +281,11 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
                 </button>
                 <button
                   type="submit"
-                  disabled={!content.trim()}
+                  disabled={!content.trim() || isUploading}
                   className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:opacity-40 transition-all"
                 >
-                  <Send className="w-3.5 h-3.5" /> Đăng Bài
+                  {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} 
+                  {isUploading ? 'Đang Đăng...' : 'Đăng Bài'}
                 </button>
               </div>
             </div>

@@ -1,9 +1,73 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
-  --foreground: #f8fafc;
+  /* Softer dark base (muted navy instead of pure black) */
+  --background: #071026;
+  --foreground: #e6eef6;
+  --foreground-dim: #9fb0c2;
 }
+
+/* Light theme variables (apply by adding `theme-light` class on <html>) */
+.theme-light {
+  /* Muted light theme: off-white background and deep-blue foreground */
+  --background: #f3f6f9;
+  --foreground: #071026;
+  --foreground-dim: #475569;
+}
+
+/* Quick overrides for common Tailwind slate/bg/text utilities to approximate a light theme.
+   This is an incremental fix — for a robust solution, migrate color usage to CSS variables or
+   configure Tailwind's theming. */
+.theme-light body,
+.theme-light .min-h-screen,
+.theme-light .min-h-full {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+.theme-light .bg-slate-950 { background-color: #f3f6f9 !important; }
+.theme-light .bg-slate-900 { background-color: #eef4f8 !important; }
+.theme-light .bg-slate-900\/90 { background-color: rgba(238,244,248,0.9) !important; }
+.theme-light .bg-slate-800 { background-color: #e6eef6 !important; }
+.theme-light .text-slate-100 { color: #071026 !important; }
+.theme-light .text-slate-200 { color: #071026 !important; }
+.theme-light .text-slate-300 { color: #071026 !important; }
+.theme-light .text-slate-400 { color: #334155 !important; }
+.theme-light .border-slate-800 { border-color: #d1dbe6 !important; }
+.theme-light .border-slate-700 { border-color: #d1dbe6 !important; }
+.theme-light .placeholder-slate-400 { color: #94a3b8 !important; }
+
+/* Broader attribute-based overrides to catch many Tailwind utility variants */
+.theme-light [class*="bg-slate-"] { background-color: var(--background) !important; }
+.theme-light [class*="text-slate-"] { color: var(--foreground) !important; }
+.theme-light .text-white { color: var(--foreground) !important; }
+.theme-light [class*="border-slate-"] { border-color: rgba(15,23,42,0.08) !important; }
+.theme-light [class*="placeholder-slate-"] { color: rgba(51,65,85,0.7) !important; }
+
+/* Inputs and textareas */
+.theme-light input, .theme-light textarea, .theme-light select {
+  /* slightly off-white inputs to reduce harsh contrast */
+  background-color: #f6f9fc !important;
+  color: var(--foreground) !important;
+  border-color: rgba(7,16,38,0.06) !important;
+}
+.theme-light input::placeholder, .theme-light textarea::placeholder { color: rgba(51,65,85,0.5) !important; }
+
+/* Buttons that use bg-slate-* classes */
+.theme-light button[class*="bg-slate-"] {
+  background-color: #eef4f8 !important;
+  color: var(--foreground) !important;
+}
+
+/* Improve contrast for amber/yellow accents in light theme */
+.theme-light .text-amber-400,
+.theme-light [class*="text-amber-"] {
+  color: #b75320 !important; /* slightly muted amber */
+}
+.theme-light .fill-amber-400 { fill: #b75320 !important; }
+.theme-light .bg-amber-500 { background-color: #f97316 !important; }
+.theme-light .bg-amber-500\/:\/10 { background-color: rgba(249,115,22,0.08) !important; }
+.theme-light .border-amber-500 { border-color: #f97316 !important; }
+
 
 body {
   background: var(--background);

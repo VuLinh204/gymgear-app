@@ -2,12 +2,12 @@ import { supabase } from './supabase';
 import { SocialPost, BookingRequest, UserAuthor, UserRole, PostComment } from '@/types';
 
 async function getCurrentAuthId(): Promise<string | undefined> {
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { session }, error } = await supabase.auth.getSession();
   if (error) {
-    console.warn('Unable to resolve current auth user:', error.message);
+    console.warn('Unable to resolve current auth session:', error.message);
     return undefined;
   }
-  return user?.id;
+  return session?.user?.id;
 }
 
 // ── LẤY POSTS ───────────────────────────────────────────────────────────────
@@ -16,6 +16,7 @@ export async function fetchPosts(currentUserId?: string) {
     supabase
       .from('posts')
       .select('*, author:users(*)')
+      .or('is_deleted.eq.false,is_deleted.is.null')
       .order('created_at', { ascending: false }),
     supabase.from('equipments').select('*')
   ]);
@@ -37,8 +38,23 @@ export async function fetchPosts(currentUserId?: string) {
   const likesData = likesRes.data || [];
   const commentsData = commentsRes.data || [];
 
-  // Lấy auth UID để xác định bài đã like
+  // Lấy auth UID để xác định bài đã like và đã bookmark
   const currentAuthId = await getCurrentAuthId();
+
+  // Lấy danh sách bookmark của user hiện tại (fail gracefully nếu bảng chưa tồn tại)
+  let userBookmarkedPostIds = new Set<string>();
+  if (currentAuthId && postIds.length > 0) {
+    try {
+      const { data: bookmarkData, error: bkErr } = await supabase
+        .from('bookmarks')
+        .select('post_id')
+        .eq('user_id', currentAuthId)
+        .in('post_id', postIds);
+      if (!bkErr) {
+        (bookmarkData || []).forEach((b: any) => userBookmarkedPostIds.add(b.post_id));
+      }
+    } catch (_) { /* bảng bookmarks chưa tồn tại */ }
+  }
 
   // Đếm likes và comments theo post_id
   const likeCountMap: Record<string, number> = {};
@@ -62,6 +78,7 @@ export async function fetchPosts(currentUserId?: string) {
     likesCount: likeCountMap[post.id] || 0,
     commentsCount: commentCountMap[post.id] || 0,
     isLiked: userLikedPostIds.has(post.id),
+    isBookmarked: userBookmarkedPostIds.has(post.id),
   }));
 }
 
@@ -223,9 +240,13 @@ export async function fetchEquipments() {
     .from('equipments')
     .select('*')
     .order('created_at', { ascending: false });
-    
+
   if (error) {
-    console.error("Error fetching equipments:", error);
+    const fmt = (e: any) => {
+      try { return JSON.stringify(e, Object.getOwnPropertyNames(e)); }
+      catch { return String(e); }
+    };
+    console.error('Error fetching equipments:', fmt(error), error);
     return [];
   }
   return data || [];
@@ -318,3 +339,376 @@ export async function getCurrentUser(): Promise<UserAuthor | null> {
     roleTitle: profile.role_title, isVerified: profile.is_verified
   };
 }
+
+// ── PROFILE & SETTINGS ───────────────────────────────────────────────────────
+export async function fetchUserPosts(userId: string) {
+  const [postsRes, equipRes] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('*, author:users(*)')
+      .eq('author_id', userId)
+      .or('is_deleted.eq.false,is_deleted.is.null')
+      .order('created_at', { ascending: false }),
+    supabase.from('equipments').select('*')
+  ]);
+    
+  if (postsRes.error) {
+    console.error("Error fetching user posts:", postsRes.error);
+    return [];
+  }
+
+  const equipments = equipRes.data || [];
+  const postIds = (postsRes.data || []).map((p: any) => p.id);
+  
+  if (postIds.length === 0) return [];
+
+  const [likesRes, commentsRes] = await Promise.all([
+    supabase.from('likes').select('post_id, author_id').in('post_id', postIds),
+    supabase.from('comments').select('post_id').in('post_id', postIds),
+  ]);
+
+  const likesData = likesRes.data || [];
+  const commentsData = commentsRes.data || [];
+  const currentAuthId = await getCurrentAuthId();
+
+  const likeCountMap: Record<string, number> = {};
+  const commentCountMap: Record<string, number> = {};
+  const userLikedPostIds = new Set<string>();
+
+  likesData.forEach((l: any) => {
+    likeCountMap[l.post_id] = (likeCountMap[l.post_id] || 0) + 1;
+    if (currentAuthId && l.author_id === currentAuthId) {
+      userLikedPostIds.add(l.post_id);
+    }
+  });
+
+  commentsData.forEach((c: any) => {
+    commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
+  });
+  
+  return (postsRes.data || []).map((post: any) => ({
+    ...post,
+    author: {
+      id: post.author.id,
+      name: post.author.name,
+      avatar: post.author.avatar,
+      role: post.author.role,
+      roleTitle: post.author.role_title,
+      isVerified: post.author.is_verified,
+    },
+    createdAt: new Date(post.created_at).toLocaleString('vi-VN', { 
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' 
+    }),
+    taggedEquipment: equipments.find((eq: any) => eq.id === post.equipment_id) || null,
+    likesCount: likeCountMap[post.id] || 0,
+    commentsCount: commentCountMap[post.id] || 0,
+    isLiked: userLikedPostIds.has(post.id),
+  }));
+}
+
+export async function updateUserProfile(userId: string, data: { name?: string; avatar?: string; roleTitle?: string }) {
+  const updates: any = {};
+  if (data.name) updates.name = data.name;
+  if (data.avatar) updates.avatar = data.avatar;
+  if (data.roleTitle !== undefined) updates.role_title = data.roleTitle;
+
+  const { error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', userId);
+    
+  if (error) {
+    console.error("Error updating profile:", error);
+    return false;
+  }
+  return true;
+}
+
+export async function upgradeUserRole(userId: string, newRole: UserRole) {
+  const { error } = await supabase
+    .from('users')
+    .update({ role: newRole })
+    .eq('id', userId);
+    
+  if (error) {
+    console.error("Error upgrading user:", error);
+    return false;
+  }
+  return true;
+}
+
+// ── STORAGE: TẢI ẢNH LÊN ───────────────────────────────────────────────────
+export async function uploadImage(file: File, folder: 'avatars' | 'posts'): Promise<string | null> {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+    const filePath = `${folder}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError.message);
+      return null;
+    }
+
+    const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+    return data.publicUrl;
+  } catch (err) {
+    console.error('Unexpected error during upload:', err);
+    return null;
+  }
+}
+
+// ── XOÁ POST (MỀM) ───────────────────────────────────────────────────────────
+export async function deletePost(postId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('posts')
+    .update({ is_deleted: true })
+    .eq('id', postId);
+
+  if (error) {
+    console.error("Error soft deleting post:", error.message);
+    return false;
+  }
+  return true;
+}
+
+// ── KHÔI PHỤC POST ──────────────────────────────────────────────────────────
+export async function restorePost(postId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('posts')
+    .update({ is_deleted: false })
+    .eq('id', postId);
+
+  if (error) {
+    console.error("Error restoring post:", error.message);
+    return false;
+  }
+  return true;
+}
+
+// ── XOÁ POST VĨNH VIỄN ───────────────────────────────────────────────────────
+export async function hardDeletePost(postId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId);
+
+  if (error) {
+    console.error("Error hard deleting post:", error.message);
+    return false;
+  }
+  return true;
+}
+
+// ── LẤY BÀI VIẾT ĐÃ XOÁ MỀM ──────────────────────────────────────────────────
+export async function fetchDeletedPosts(userId: string) {
+  const [postsRes, equipRes] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('*, author:users(*)')
+      .eq('author_id', userId)
+      .eq('is_deleted', true)
+      .order('created_at', { ascending: false }),
+    supabase.from('equipments').select('*')
+  ]);
+    
+  if (postsRes.error) {
+    console.error("Error fetching deleted posts:", postsRes.error);
+    return [];
+  }
+
+  const equipments = equipRes.data || [];
+  const postIds = (postsRes.data || []).map((p: any) => p.id);
+  
+  if (postIds.length === 0) return [];
+
+  const [likesRes, commentsRes] = await Promise.all([
+    supabase.from('likes').select('post_id, author_id').in('post_id', postIds),
+    supabase.from('comments').select('post_id').in('post_id', postIds),
+  ]);
+
+  const likesData = likesRes.data || [];
+  const commentsData = commentsRes.data || [];
+  const currentAuthId = await getCurrentAuthId();
+
+  const likeCountMap: Record<string, number> = {};
+  const commentCountMap: Record<string, number> = {};
+  const userLikedPostIds = new Set<string>();
+
+  likesData.forEach((l: any) => {
+    likeCountMap[l.post_id] = (likeCountMap[l.post_id] || 0) + 1;
+    if (currentAuthId && l.author_id === currentAuthId) {
+      userLikedPostIds.add(l.post_id);
+    }
+  });
+
+  commentsData.forEach((c: any) => {
+    commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
+  });
+  
+  return (postsRes.data || []).map((post: any) => ({
+    ...post,
+    author: {
+      id: post.author.id,
+      name: post.author.name,
+      avatar: post.author.avatar,
+      role: post.author.role,
+      roleTitle: post.author.role_title,
+      isVerified: post.author.is_verified,
+    },
+    createdAt: new Date(post.created_at).toLocaleString('vi-VN', { 
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' 
+    }),
+    taggedEquipment: equipments.find((eq: any) => eq.id === post.equipment_id) || null,
+    likesCount: likeCountMap[post.id] || 0,
+    commentsCount: commentCountMap[post.id] || 0,
+    isLiked: userLikedPostIds.has(post.id),
+  }));
+}
+
+// ── CẬP NHẬT NỘI DUNG POST ───────────────────────────────────────────────────
+export async function updatePost(
+  postId: string,
+  content: string,
+  rating: number,
+  equipmentId?: string,
+  images?: string[]
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('posts')
+    .update({
+      content,
+      rating,
+      equipment_id: equipmentId || null,
+      ...(images !== undefined && { images })
+    })
+    .eq('id', postId);
+
+  if (error) {
+    console.error("Error updating post:", error.message);
+    return false;
+  }
+  return true;
+}
+
+// ── TOGGLE BOOKMARK (LƯU BÀI) ────────────────────────────────────────────────
+export async function toggleBookmark(postId: string): Promise<{ bookmarked: boolean; error?: string }> {
+  const authId = await getCurrentAuthId();
+  if (!authId) return { bookmarked: false, error: 'not_authenticated' };
+
+  const { data: existing, error: selectErr } = await supabase
+    .from('bookmarks')
+    .select('id')
+    .eq('post_id', postId)
+    .eq('user_id', authId)
+    .maybeSingle();
+
+  if (selectErr) {
+    console.error('Bookmark select error:', selectErr.message);
+    return { bookmarked: false, error: selectErr.message };
+  }
+
+  if (existing) {
+    const { error: delErr } = await supabase.from('bookmarks').delete().eq('id', existing.id);
+    if (delErr) return { bookmarked: true, error: delErr.message };
+    return { bookmarked: false };
+  } else {
+    const { error: insErr } = await supabase.from('bookmarks').insert({ post_id: postId, user_id: authId });
+    if (insErr) return { bookmarked: false, error: insErr.message };
+    return { bookmarked: true };
+  }
+}
+
+// ── LẤY BÀI VIẾT ĐÃ LƯU CỦA USER ───────────────────────────────────────────
+export async function fetchBookmarkedPosts(userId: string) {
+  const authId = await getCurrentAuthId();
+  if (!authId) return [];
+
+  const { data: bookmarkData, error: bErr } = await supabase
+    .from('bookmarks')
+    .select('post_id')
+    .eq('user_id', authId);
+
+  if (bErr || !bookmarkData || bookmarkData.length === 0) return [];
+
+  const postIds = bookmarkData.map((b: any) => b.post_id);
+
+  const [postsRes, equipRes, likesRes, commentsRes] = await Promise.all([
+    supabase
+      .from('posts')
+      .select('*, author:users(*)')
+      .in('id', postIds)
+      .or('is_deleted.eq.false,is_deleted.is.null')
+      .order('created_at', { ascending: false }),
+    supabase.from('equipments').select('*'),
+    supabase.from('likes').select('post_id, author_id').in('post_id', postIds),
+    supabase.from('comments').select('post_id').in('post_id', postIds),
+  ]);
+
+  if (postsRes.error || !postsRes.data) return [];
+
+  const equipments = equipRes.data || [];
+  const likesData = likesRes.data || [];
+  const commentsData = commentsRes.data || [];
+
+  const likeCountMap: Record<string, number> = {};
+  const commentCountMap: Record<string, number> = {};
+  const userLikedPostIds = new Set<string>();
+
+  likesData.forEach((l: any) => {
+    likeCountMap[l.post_id] = (likeCountMap[l.post_id] || 0) + 1;
+    if (l.author_id === authId) userLikedPostIds.add(l.post_id);
+  });
+
+  commentsData.forEach((c: any) => {
+    commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
+  });
+
+  return postsRes.data.map((post: any) => ({
+    ...post,
+    author: {
+      id: post.author.id,
+      name: post.author.name,
+      avatar: post.author.avatar,
+      role: post.author.role,
+      roleTitle: post.author.role_title,
+      isVerified: post.author.is_verified,
+    },
+    createdAt: new Date(post.created_at).toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
+    }),
+    taggedEquipment: equipments.find((eq: any) => eq.id === post.equipment_id) || null,
+    likesCount: likeCountMap[post.id] || 0,
+    commentsCount: commentCountMap[post.id] || 0,
+    isLiked: userLikedPostIds.has(post.id),
+    isBookmarked: true,
+  }));
+}
+
+// ── LẤY THÔNG TIN USER THEO ID ───────────────────────────────────────────────
+export async function fetchUserById(userId: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    avatar: data.avatar,
+    role: data.role,
+    roleTitle: data.role_title,
+    isVerified: data.is_verified,
+  };
+}
+

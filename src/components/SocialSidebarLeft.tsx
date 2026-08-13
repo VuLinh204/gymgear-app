@@ -4,18 +4,21 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { CATEGORIES } from '@/data/mockData';
 import { CategoryType } from '@/types';
-import { Newspaper, Dumbbell, MapPin, Bookmark, Sparkles, Activity, Home, Layers, Disc, Grid, Users, Crown, ShieldCheck, UserCheck, Eye } from 'lucide-react';
+import { Newspaper, Dumbbell, MapPin, Bookmark, Sparkles, Activity, Home, Layers, Disc, Grid, Users, Crown, ShieldCheck, UserCheck, Eye, User, Settings } from 'lucide-react';
+import Link from 'next/link';
 
 interface SocialSidebarLeftProps {
   activeCategory: CategoryType;
   onSelectCategory: (cat: CategoryType) => void;
   onOpenBooking: () => void;
+  onOpenSaved?: () => void;
 }
 
 export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
   activeCategory,
   onSelectCategory,
-  onOpenBooking
+  onOpenBooking,
+  onOpenSaved
 }) => {
   const { currentUser, role, isGuest, isPremium, isAdmin, requestAuth } = useAuth();
 
@@ -74,8 +77,8 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
               <Eye className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Khách Vãng Lai</h4>
-              <p className="text-[11px] text-slate-400 mt-1">Đăng nhập để viết bài review máy gym & theo dõi cộng đồng.</p>
+              <h4 className="text-sm font-bold text-[var(--foreground)]">Khách Vãng Lai</h4>
+              <p className="text-[11px] text-[var(--foreground-dim)] mt-1">Đăng nhập để viết bài review máy gym & theo dõi cộng đồng.</p>
             </div>
             <div className="pt-1 space-y-2">
               <button
@@ -103,21 +106,21 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
                 }`}
               />
               <div>
-                <h4 className="text-sm font-bold text-white leading-tight">
+                <h4 className="text-sm font-bold text-[var(--foreground)] leading-tight">
                   {currentUser.name}
                 </h4>
                 <div className="mt-1">{getRoleBadge()}</div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-slate-800 text-center text-xs">
+                <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-slate-800 text-center text-xs">
               <div>
-                <span className="font-bold text-white block">{currentUser.email || 'Thành viên'}</span>
-                <span className="text-[10px] text-slate-400">Tài khoản</span>
+                <span className="font-bold text-[var(--foreground)] block">{currentUser.email || 'Thành viên'}</span>
+                <span className="text-[10px] text-[var(--foreground-dim)]">Tài khoản</span>
               </div>
               <div>
                 <span className="font-bold text-emerald-400 block">Hoạt động</span>
-                <span className="text-[10px] text-slate-400">Trạng thái</span>
+                <span className="text-[10px] text-[var(--foreground-dim)]">Trạng thái</span>
               </div>
             </div>
 
@@ -164,11 +167,32 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
         </button>
 
         <button
+          onClick={() => onOpenSaved && onOpenSaved()}
           className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
         >
           <Bookmark className="w-4 h-4 text-emerald-400" />
           <span>Bài Viết Đã Lưu</span>
         </button>
+
+        {!isGuest && (
+          <>
+            <div className="border-t border-slate-800/80 my-2"></div>
+            <Link
+              href="/profile"
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+            >
+              <User className="w-4 h-4 text-slate-400" />
+              <span>Hồ Sơ Cá Nhân</span>
+            </Link>
+            <Link
+              href="/settings"
+              className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+            >
+              <Settings className="w-4 h-4 text-slate-400" />
+              <span>Cài Đặt Tài Khoản</span>
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Category Filter Menu */}

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { SocialSidebarLeft } from '@/components/SocialSidebarLeft';
 import { SocialSidebarRight } from '@/components/SocialSidebarRight';
@@ -12,6 +13,7 @@ import { BookingModal } from '@/components/BookingModal';
 import { AdminDashboardModal } from '@/components/AdminDashboardModal';
 import { AuthModal } from '@/components/AuthModal';
 import { Footer } from '@/components/Footer';
+import { EditPostModal } from '@/components/EditPostModal';
 import { fetchPosts, createPost } from '@/lib/supabaseDB';
 import { SocialPost, Equipment, CategoryType } from '@/types';
 import { Search } from 'lucide-react';
@@ -30,6 +32,7 @@ function AppLayout() {
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [bookingEquipment, setBookingEquipment] = useState<Equipment | null>(null);
   const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -74,9 +77,19 @@ function AppLayout() {
     }
   };
 
+  const handleDeletePost = (deletedPostId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== deletedPostId));
+  };
+
   const handleOpenBooking = (equipment?: Equipment | null) => {
     setBookingEquipment(equipment || null);
     setBookingModalOpen(true);
+  };
+
+  const router = useRouter();
+
+  const handleOpenSaved = () => {
+    router.push('/profile?saved=true');
   };
 
   return (
@@ -99,6 +112,7 @@ function AppLayout() {
               activeCategory={activeCategory}
               onSelectCategory={setActiveCategory}
               onOpenBooking={() => handleOpenBooking(null)}
+              onOpenSaved={handleOpenSaved}
             />
           </div>
 
@@ -138,6 +152,8 @@ function AppLayout() {
                     post={post}
                     onViewEquipment={setSelectedEquipment}
                     onBookEquipment={handleOpenBooking}
+                    onDelete={handleDeletePost}
+                    onEdit={setEditingPost}
                   />
                 ))}
               </div>
@@ -191,17 +207,19 @@ function AppLayout() {
         onClose={() => setAdminDashboardOpen(false)}
       />
 
+      <EditPostModal
+        post={editingPost}
+        onClose={() => setEditingPost(null)}
+        onUpdate={(updated) => setPosts(prev => prev.map(p => p.id === updated.id ? updated : p))}
+      />
+
       {/* AuthModal tự đọc trạng thái từ AuthContext — không cần props */}
       <AuthModal />
     </div>
   );
 }
 
-// ─── Root export (wraps with AuthProvider) ────────────────────────────────────
+// ─── Root export ───────────────────────────────────────────────────────────────
 export default function Home() {
-  return (
-    <AuthProvider>
-      <AppLayout />
-    </AuthProvider>
-  );
+  return <AppLayout />;
 }

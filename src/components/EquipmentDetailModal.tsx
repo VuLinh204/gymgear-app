@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Equipment } from '@/types';
 import { MOCK_REVIEWS } from '@/data/mockData';
@@ -15,9 +15,13 @@ interface EquipmentDetailModalProps {
 export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equipment, onClose, onOpenBooking }) => {
   const { isPremium, isAdmin, isGuest } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'reviews'>('overview');
+  const [selectedImage, setSelectedImage] = useState<string>('');
+
+  useEffect(() => {
+    setSelectedImage(equipment?.thumbnail ?? equipment?.gallery?.[0] ?? '');
+  }, [equipment]);
 
   if (!equipment) return null;
-  const [selectedImage, setSelectedImage] = useState(equipment.thumbnail);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fadeIn">
@@ -174,7 +178,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                   <span>Ưu Điểm Nổi Bật</span>
                 </h4>
                 <ul className="space-y-1.5 text-xs text-slate-300">
-                  {equipment.pros.map((p, idx) => (
+                  {(equipment.pros || []).map((p, idx) => (
                     <li key={idx} className="flex items-start space-x-2">
                       <span className="text-emerald-400 font-bold">•</span>
                       <span>{p}</span>
@@ -189,7 +193,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                   <span>Điểm Cần Lưu Ý (Nhược Điểm)</span>
                 </h4>
                 <ul className="space-y-1.5 text-xs text-slate-300">
-                  {equipment.cons.map((c, idx) => (
+                  {(equipment.cons || []).map((c, idx) => (
                     <li key={idx} className="flex items-start space-x-2">
                       <span className="text-rose-400 font-bold">•</span>
                       <span>{c}</span>
@@ -203,34 +207,42 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
           {activeTab === 'specs' && (
             <div className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden text-xs">
               <div className="divide-y divide-slate-800">
-                {equipment.specifications.powerOutput && (
+                {equipment.specifications?.powerOutput && (
                   <div className="grid grid-cols-3 p-3">
                     <span className="text-slate-400 font-medium">Công Suất Động Cơ</span>
                     <span className="col-span-2 text-white font-bold">{equipment.specifications.powerOutput}</span>
                   </div>
                 )}
-                <div className="grid grid-cols-3 p-3">
-                  <span className="text-slate-400 font-medium">Tải Trọng Tối Đa</span>
-                  <span className="col-span-2 text-white font-bold">{equipment.specifications.weightCapacity}</span>
-                </div>
-                <div className="grid grid-cols-3 p-3">
-                  <span className="text-slate-400 font-medium">Kích Thước (DxRxC)</span>
-                  <span className="col-span-2 text-white font-mono">{equipment.specifications.dimensions}</span>
-                </div>
-                <div className="grid grid-cols-3 p-3">
-                  <span className="text-slate-400 font-medium">Trọng Lượng Máy</span>
-                  <span className="col-span-2 text-white font-bold">{equipment.specifications.machineWeight}</span>
-                </div>
-                {equipment.specifications.targetMuscles && (
+                {equipment.specifications?.weightCapacity && (
+                  <div className="grid grid-cols-3 p-3">
+                    <span className="text-slate-400 font-medium">Tải Trọng Tối Đa</span>
+                    <span className="col-span-2 text-white font-bold">{equipment.specifications.weightCapacity}</span>
+                  </div>
+                )}
+                {equipment.specifications?.dimensions && (
+                  <div className="grid grid-cols-3 p-3">
+                    <span className="text-slate-400 font-medium">Kích Thước (DxRxC)</span>
+                    <span className="col-span-2 text-white font-mono">{equipment.specifications.dimensions}</span>
+                  </div>
+                )}
+                {equipment.specifications?.machineWeight && (
+                  <div className="grid grid-cols-3 p-3">
+                    <span className="text-slate-400 font-medium">Trọng Lượng Máy</span>
+                    <span className="col-span-2 text-white font-bold">{equipment.specifications.machineWeight}</span>
+                  </div>
+                )}
+                {equipment.specifications?.targetMuscles && (
                   <div className="grid grid-cols-3 p-3">
                     <span className="text-slate-400 font-medium">Nhóm Cơ Tác Động</span>
                     <span className="col-span-2 text-amber-400 font-semibold">{equipment.specifications.targetMuscles.join(', ')}</span>
                   </div>
                 )}
-                <div className="grid grid-cols-3 p-3">
-                  <span className="text-slate-400 font-medium">Chính Sách Bảo Hành</span>
-                  <span className="col-span-2 text-emerald-400 font-bold">{equipment.specifications.warranty}</span>
-                </div>
+                {equipment.specifications?.warranty && (
+                  <div className="grid grid-cols-3 p-3">
+                    <span className="text-slate-400 font-medium">Chính Sách Bảo Hành</span>
+                    <span className="col-span-2 text-emerald-400 font-bold">{equipment.specifications.warranty}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

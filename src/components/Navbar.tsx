@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Dumbbell, Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn, UserPlus, LogOut, ChevronDown } from 'lucide-react';
+import { Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn, UserPlus, LogOut, ChevronDown, User, Settings, Sun, Moon } from 'lucide-react';
+import Link from 'next/link';
 
 interface NavbarProps {
   onSearch: (query: string) => void;
@@ -15,6 +16,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenA
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isLight, setIsLight] = useState(false);
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' && localStorage.getItem('theme');
+    const light = saved === 'light';
+    setIsLight(light);
+    if (light) document.documentElement.classList.add('theme-light');
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isLight;
+    setIsLight(next);
+    if (next) {
+      document.documentElement.classList.add('theme-light');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.documentElement.classList.remove('theme-light');
+      localStorage.setItem('theme', 'dark');
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -27,28 +48,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenA
         <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
 
           {/* ── Logo ─────────────────────────────────────────────────────── */}
-          <div
-            className="flex items-center gap-3 cursor-pointer shrink-0"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/20 hover:scale-105 transition-transform">
-              <Dumbbell className="w-5 h-5 text-white -rotate-12" />
-            </div>
-            <div className="hidden sm:block">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-extrabold text-white">GymGear</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                  Social Feed
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400">Review &amp; Booking Máy Tập Gym</p>
-            </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Link href="/" className="flex items-center" aria-label="Go to homepage">
+              <img src={isLight ? '/LogoGymGearDark.png' : '/LogoGymGear.png'} alt="GymGear" className="h-10 object-contain" />
+            </Link>
           </div>
 
           {/* ── Search ───────────────────────────────────────────────────── */}
           <div className="hidden md:flex flex-1 max-w-md">
             <div className="relative w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+              <Search className="w-4 h-4 text-[var(--foreground-dim)] absolute left-3.5 top-2.5" />
               <input
                 type="text"
                 placeholder="Tìm review, máy chạy bộ, smith machine..."
@@ -83,6 +92,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenA
             <button className="relative p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            </button>
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition"
+              aria-label="Toggle theme"
+            >
+              {isLight ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
             </button>
 
             {/* Book button (luôn hiển thị) */}
@@ -125,21 +143,39 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenA
                     }`}
                   />
                   <div className="text-left hidden lg:block">
-                    <p className="text-xs font-bold text-white leading-none">{currentUser.name}</p>
-                    <p className="text-[10px] text-slate-400 leading-none mt-0.5">{currentUser.role.toUpperCase()}</p>
+                    <p className="text-xs font-bold text-[var(--foreground)] leading-none">{currentUser.name}</p>
+                    <p className="text-[10px] text-[var(--foreground-dim)] leading-none mt-0.5">{currentUser.role.toUpperCase()}</p>
                   </div>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3 h-3 text-[var(--foreground-dim)] transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-800 bg-slate-950">
-                      <p className="text-xs font-bold text-white">{currentUser.name}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{currentUser.email || currentUser.roleTitle}</p>
+                      <p className="text-xs font-bold text-[var(--foreground)]">{currentUser.name}</p>
+                      <p className="text-[10px] text-[var(--foreground-dim)] mt-0.5">{currentUser.email || currentUser.roleTitle}</p>
                     </div>
+                    
+                    <div className="py-1 border-b border-slate-800">
+                      <Link 
+                        href="/profile" 
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-xs text-[var(--foreground-dim)] hover:text-[var(--foreground)] hover:bg-slate-800 transition-colors"
+                      >
+                        <User className="w-3.5 h-3.5" /> Hồ Sơ Cá Nhân
+                      </Link>
+                      <Link 
+                        href="/settings" 
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-xs text-[var(--foreground-dim)] hover:text-[var(--foreground)] hover:bg-slate-800 transition-colors"
+                      >
+                        <Settings className="w-3.5 h-3.5" /> Cài Đặt Tài Khoản
+                      </Link>
+                    </div>
+
                     <button
                       onClick={() => { logout(); setUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Đăng Xuất
                     </button>
@@ -192,8 +228,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenA
                 <div className="flex items-center gap-2">
                   <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover border-2 border-amber-500" alt="" />
                   <div>
-                    <p className="font-bold text-white">{currentUser.name}</p>
-                    <p className="text-slate-400">{currentUser.roleTitle}</p>
+                    <p className="font-bold text-[var(--foreground)]">{currentUser.name}</p>
+                    <p className="text-[var(--foreground-dim)]">{currentUser.roleTitle}</p>
                   </div>
                 </div>
                 <button
