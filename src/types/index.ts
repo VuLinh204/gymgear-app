@@ -70,6 +70,7 @@ export interface SocialPost {
   likesCount: number;
   commentsCount: number;
   sharesCount: number;
+  isReposted?: boolean;
   isLiked?: boolean;
   isBookmarked?: boolean;
   isPinned?: boolean;           // Đặc quyền ghim bài của Premium/Admin
