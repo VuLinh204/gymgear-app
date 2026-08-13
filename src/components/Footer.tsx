@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Dumbbell, MapPin, Phone, Mail, ShieldCheck, Heart } from 'lucide-react';
+import { MapPin, Phone, Mail, Heart } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -10,20 +10,10 @@ export const Footer: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           
-          {/* Col 1: Brand */}
-          <div className="space-y-3">
+          {/* Col 1: Brand (minimal) */}
+          <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white">
-                <Dumbbell className="w-5 h-5" />
-              </div>
-              <span className="text-lg font-extrabold text-white">GymGear Review</span>
-            </div>
-            <p className="text-slate-400 leading-relaxed">
-              Nền tảng review độc lập & hỗ trợ đặt lịch trải nghiệm thực tế các dòng máy tập Gym commercial & home gym hàng đầu tại Việt Nam.
-            </p>
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-md bg-slate-900 border border-slate-800 text-emerald-400 font-mono">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Hạ tầng 100% Free Stack (Vercel + Supabase)</span>
+              <img src="/LogoGymGear.png" alt="GymGear" className="h-10 object-contain" />
             </div>
           </div>
 
@@ -58,17 +48,21 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Col 4: Contact */}
+          {/* Col 4: Contact (updated) */}
           <div className="space-y-2">
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Hỗ Trợ Booking 24/7</h4>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Liên Hệ</h4>
             <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
               <div className="flex items-center space-x-2 text-slate-200">
                 <Phone className="w-4 h-4 text-orange-400" />
-                <span className="font-bold">Hotline: 1900 6868 (Phím 1)</span>
+                <span className="font-bold">Hotline: 0364704715</span>
               </div>
               <div className="flex items-center space-x-2 text-slate-300">
                 <Mail className="w-4 h-4 text-amber-400" />
-                <span>booking@gymgear-review.vn</span>
+                <span>linhlg2004@gmail.com</span>
+              </div>
+              <div className="flex items-center space-x-2 text-slate-300">
+                <MapPin className="w-4 h-4 text-emerald-400" />
+                <span>268 Nguyễn Thái Sơn, Gò Vấp, TP.HCM</span>
               </div>
             </div>
           </div>
