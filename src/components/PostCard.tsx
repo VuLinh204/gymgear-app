@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toggleLike, addComment, fetchCommentsByPost, deletePost, hardDeletePost, restorePost, toggleBookmark } from '@/lib/supabaseDB';
 import Link from 'next/link';
+import AuthorPreview from './AuthorPreview';
 
 interface PostCardProps {
   post: SocialPost;
@@ -106,9 +107,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <Link href={`/user/${post.author.id}`} onClick={onClose} className="text-sm font-bold text-white hover:text-amber-400 transition-colors cursor-pointer">
-                  {post.author.name}
-                </Link>
+                <AuthorPreview userId={post.author.id} onNavigate={onClose} initialName={post.author.name} initialAvatar={post.author.avatar} />
                 <RoleBadge role={post.author.role} />
               </div>
               <p className="text-[11px] text-slate-400">{post.createdAt}</p>
@@ -222,9 +221,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
                   <div className="flex-1 bg-slate-950 rounded-2xl p-3 text-xs space-y-1 border border-slate-800/60">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Link href={`/user/${c.author.id}`} onClick={onClose} className="font-bold text-white hover:text-amber-400 transition-colors cursor-pointer">
-                          {c.author.name}
-                        </Link>
+                        <AuthorPreview userId={c.author.id} onNavigate={onClose} initialName={c.author.name} initialAvatar={c.author.avatar} />
                         <RoleBadge role={c.author.role} />
                       </div>
                       <span className="text-[10px] text-slate-500">{c.createdAt}</span>
@@ -303,6 +300,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [newCommentText, setNewCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [bookmarked, setBookmarked] = useState(post.isBookmarked || false);
+  const [sharesCount, setSharesCount] = useState(post.sharesCount || 0);
+  const [reposted, setReposted] = useState(post.isReposted || false);
 
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -312,6 +311,8 @@ export const PostCard: React.FC<PostCardProps> = ({
     setCommentList(post.comments || []);
     setCommentsCount(post.commentsCount || 0);
     setBookmarked(Boolean(post.isBookmarked));
+    setSharesCount(post.sharesCount || 0);
+    setReposted(Boolean(post.isReposted));
   }, [post.id, post.isLiked, post.likesCount, post.comments, post.commentsCount, post.isBookmarked]);
 
   const handleToggleLike = async () => {
@@ -407,12 +408,34 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: `Bài viết của ${post.author.name}`, text: post.content, url: window.location.href });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Đã sao chép link!');
-    }
+    // Toggle repost via API
+    (async () => {
+      if (isGuest) { requestAuth('login'); return; }
+      try {
+        const res = await fetch('/api/repost', { method: 'POST', body: JSON.stringify({ postId: post.id }), headers: { 'Content-Type': 'application/json' } });
+        const j = await res.json();
+        if (j && typeof j.reposted !== 'undefined') {
+          setReposted(Boolean(j.reposted));
+          setSharesCount(j.count || (sharesCount + (j.reposted ? 1 : -1)));
+        } else {
+          // fallback to copy link
+          if (navigator.share) {
+            navigator.share({ title: `Bài viết của ${post.author.name}`, text: post.content, url: window.location.href });
+          } else {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Đã sao chép link!');
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        if (navigator.share) {
+          navigator.share({ title: `Bài viết của ${post.author.name}`, text: post.content, url: window.location.href });
+        } else {
+          navigator.clipboard.writeText(window.location.href);
+          alert('Đã sao chép link!');
+        }
+      }
+    })();
   };
 
   const isOwner = currentUser && currentUser.id === post.author.id;
@@ -438,9 +461,9 @@ export const PostCard: React.FC<PostCardProps> = ({
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <Link href={`/user/${post.author.id}`} className="text-sm font-bold text-white hover:text-amber-400 cursor-pointer transition-colors">
-                  {post.author.name}
-                </Link>
+                <span className="relative">
+                  <AuthorPreview userId={post.author.id} initialName={post.author.name} initialAvatar={post.author.avatar} />
+                </span>
                 <RoleBadge role={post.author.role} />
               </div>
               <div className="flex items-center gap-2 text-[11px] mt-0.5 text-slate-400">
@@ -586,7 +609,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 className="flex items-center gap-1.5 hover:text-blue-400 transition-colors cursor-pointer"
               >
                 <Share2 className="w-4 h-4 text-blue-400/80" />
-                <span>{post.sharesCount || 0}</span>
+                <span>{sharesCount || 0}</span>
               </button>
             </div>
 
