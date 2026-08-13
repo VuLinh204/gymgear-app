@@ -15,6 +15,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center space-x-2">
               <img src="/LogoGymGear.png" alt="GymGear" className="h-10 object-contain" />
             </div>
+            <p className="text-sm text-slate-400">Chọn máy chuẩn — Tập luyện an toàn</p>
           </div>
 
           {/* Col 2: Categories */}
@@ -71,12 +72,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom */}
         <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-slate-400">
-          <p>© 2026 GymGear Review & Booking Platform. Bản quyền thuộc về cộng đồng Gym Việt Nam.</p>
-          <p className="flex items-center space-x-1 mt-2 sm:mt-0">
-            <span>Built with</span>
-            <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-            <span>using Next.js 14 & Tailwind CSS</span>
-          </p>
+          <p>© 2026 GymGear Review & Booking Platform. Bản quyền thuộc về GymGearVN.</p>
         </div>
 
       </div>
