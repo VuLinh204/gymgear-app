@@ -19,6 +19,7 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [deletedPosts, setDeletedPosts] = useState<SocialPost[]>([]);
   const [savedPosts, setSavedPosts] = useState<SocialPost[]>([]);
+  const [followersCount, setFollowersCount] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'my-posts' | 'saved' | 'trash'>('my-posts');
   const [loading, setLoading] = useState(true);
 
@@ -61,6 +62,15 @@ export default function ProfilePage() {
         setDeletedPosts(trashData);
         setSavedPosts(savedData);
         setLoading(false);
+        // load followers count for current user
+        try {
+          const res = await fetch(`/api/follow?userId=${currentUser.id}`);
+          const j = await res.json();
+          if (typeof j.followersCount === 'number') setFollowersCount(j.followersCount);
+          else setFollowersCount(0);
+        } catch (e) {
+          console.error('Failed fetching followers count', e);
+        }
       };
       loadData();
     } else {
@@ -139,6 +149,7 @@ export default function ProfilePage() {
               >
                 Chỉnh sửa hồ sơ
               </Link>
+              <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-800 rounded-xl text-xs text-slate-400 border border-slate-700 mt-3">{followersCount} người theo dõi</div>
             </div>
           </div>
         </div>

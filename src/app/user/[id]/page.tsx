@@ -8,7 +8,7 @@ import { Footer } from '@/components/Footer';
 import { PostCard } from '@/components/PostCard';
 import { EquipmentDetailModal } from '@/components/EquipmentDetailModal';
 import { BookingModal } from '@/components/BookingModal';
-import { fetchUserById, fetchUserPosts } from '@/lib/supabaseDB';
+import { fetchUserById, fetchUserPosts, isFollowingUser, toggleFollowUser } from '@/lib/supabaseDB';
 import { SocialPost, Equipment, UserAuthor } from '@/types';
 import { Crown, ShieldCheck, UserCheck, Loader2, ArrowLeft, UserCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +21,7 @@ export default function UserProfilePage() {
   const [profileUser, setProfileUser] = useState<UserAuthor | null>(null);
   const [followersCount, setFollowersCount] = useState<number>(0);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -55,12 +56,12 @@ export default function UserProfilePage() {
       try {
         const resCount = await fetch(`/api/follow?userId=${id}`);
         const jsonCount = await resCount.json();
-        setFollowersCount(jsonCount.followersCount || 0);
+        if (typeof jsonCount.followersCount === 'number') setFollowersCount(jsonCount.followersCount);
+        else setFollowersCount(0);
 
-        const resCheck = await fetch(`/api/follow?userId=${id}&check=1`);
-        const jsonCheck = await resCheck.json();
-        setIsFollowing(!!jsonCheck.isFollowing);
-      } catch (e) { /* ignore */ }
+        const following = await isFollowingUser(id);
+        setIsFollowing(!!following);
+      } catch (e) { console.error('Failed loading follow info', e); }
 
       if (!user) {
         setNotFound(true);
@@ -153,16 +154,27 @@ export default function UserProfilePage() {
                     <button
                       onClick={async () => {
                         if (!currentUser) return requestAuth('login');
+                        setFollowLoading(true);
                         try {
-                          const res = await fetch('/api/follow', { method: 'POST', body: JSON.stringify({ targetUserId: id }), headers: { 'Content-Type': 'application/json' } });
-                          const j = await res.json();
+                          const j = await toggleFollowUser(id);
                           setIsFollowing(!!j.following);
-                          setFollowersCount(j.followersCount || followersCount + (j.following ? 1 : -1));
+                          // Fetch authoritative followers count from server API (uses service role when available)
+                          try {
+                            const resp = await fetch(`/api/follow?userId=${id}`);
+                            const body = await resp.json();
+                            if (typeof body.followersCount === 'number') setFollowersCount(body.followersCount);
+                            else setFollowersCount(prev => prev + (j.following ? 1 : -1));
+                          } catch (err) {
+                            console.error('Failed refreshing followers count', err);
+                            setFollowersCount(prev => prev + (j.following ? 1 : -1));
+                          }
                         } catch (e) { console.error(e); }
+                        setFollowLoading(false);
                       }}
-                      className={`px-4 py-2 rounded-xl font-bold text-sm ${isFollowing ? 'bg-slate-700 text-white border border-slate-600' : 'bg-amber-500 text-slate-950'}`}
+                      disabled={followLoading}
+                      className={`px-4 py-2 rounded-xl font-bold text-sm ${isFollowing ? 'bg-slate-700 text-white border border-slate-600' : 'bg-amber-500 text-slate-950'} ${followLoading ? 'opacity-60 cursor-wait' : ''}`}
                     >
-                      {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
+                      {followLoading ? 'Đang xử lý...' : (isFollowing ? 'Đang theo dõi' : 'Theo dõi')}
                     </button>
                   </div>
                 </div>

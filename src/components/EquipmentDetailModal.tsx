@@ -15,10 +15,12 @@ interface EquipmentDetailModalProps {
 export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equipment, onClose, onOpenBooking }) => {
   const { isPremium, isAdmin, isGuest } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'reviews'>('overview');
-  const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<string>(equipment?.thumbnail ?? equipment?.gallery?.[0] ?? '');
 
   useEffect(() => {
-    setSelectedImage(equipment?.thumbnail ?? equipment?.gallery?.[0] ?? '');
+    if (equipment) {
+      setSelectedImage(equipment.thumbnail ?? equipment.gallery?.[0] ?? '');
+    }
   }, [equipment]);
 
   if (!equipment) return null;
@@ -53,7 +55,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
             <div className="md:col-span-6 space-y-3">
               <div className="relative h-64 sm:h-72 w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
                 <img
-                  src={selectedImage}
+                  src={selectedImage || undefined}
                   alt={equipment.name}
                   className="w-full h-full object-cover"
                 />
@@ -70,7 +72,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                         selectedImage === img ? 'border-amber-500 scale-105' : 'border-slate-800 opacity-60'
                       }`}
                     >
-                      <img src={img} alt="Thumbnail" className="w-full h-full object-cover" />
+                      <img src={img || undefined} alt="Thumbnail" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

@@ -20,7 +20,7 @@ export async function fetchPosts(currentUserId?: string) {
       .order('created_at', { ascending: false }),
     supabase.from('equipments').select('*')
   ]);
-    
+
   if (postsRes.error) {
     console.error("Error fetching posts:", postsRes.error);
     return [];
@@ -29,14 +29,16 @@ export async function fetchPosts(currentUserId?: string) {
   const equipments = equipRes.data || [];
   const postIds = (postsRes.data || []).map((p: any) => p.id);
 
-  // Lấy tất cả likes và comments cho các post này (1 lần query)
-  const [likesRes, commentsRes] = await Promise.all([
+  // Lấy tất cả likes, comments và reposts cho các post này (1 lần query)
+  const [likesRes, commentsRes, repostsRes] = await Promise.all([
     supabase.from('likes').select('post_id, author_id').in('post_id', postIds),
     supabase.from('comments').select('post_id').in('post_id', postIds),
+    supabase.from('reposts').select('post_id, author_auth').in('post_id', postIds),
   ]);
 
   const likesData = likesRes.data || [];
   const commentsData = commentsRes.data || [];
+  const repostsData = repostsRes.data || [];
 
   // Lấy auth UID để xác định bài đã like và đã bookmark
   const currentAuthId = await getCurrentAuthId();
@@ -59,6 +61,8 @@ export async function fetchPosts(currentUserId?: string) {
   // Đếm likes và comments theo post_id
   const likeCountMap: Record<string, number> = {};
   const commentCountMap: Record<string, number> = {};
+  const repostCountMap: Record<string, number> = {};
+  const userRepostedPostIds = new Set<string>();
   const userLikedPostIds = new Set<string>();
 
   likesData.forEach((l: any) => {
@@ -71,15 +75,39 @@ export async function fetchPosts(currentUserId?: string) {
   commentsData.forEach((c: any) => {
     commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
   });
-  
+
+  (repostsData || []).forEach((r: any) => {
+    repostCountMap[r.post_id] = (repostCountMap[r.post_id] || 0) + 1;
+    if (currentAuthId && r.author_auth === currentAuthId) userRepostedPostIds.add(r.post_id);
+  });
+
   return (postsRes.data || []).map((post: any) => ({
     ...post,
     taggedEquipment: equipments.find((eq: any) => eq.id === post.equipment_id) || null,
     likesCount: likeCountMap[post.id] || 0,
     commentsCount: commentCountMap[post.id] || 0,
+    sharesCount: repostCountMap[post.id] || 0,
+    isReposted: userRepostedPostIds.has(post.id),
     isLiked: userLikedPostIds.has(post.id),
     isBookmarked: userBookmarkedPostIds.has(post.id),
   }));
+}
+
+// ── REPOST (SHARE) HELPERS ─────────────────────────────────────────────────
+export async function toggleRepost(postId: string): Promise<{ reposted: boolean; count: number }> {
+  const authId = await getCurrentAuthId();
+  if (!authId) return { reposted: false, count: 0 };
+
+  // check existing
+  const { data: existing } = await supabase.from('reposts').select('id').eq('post_id', postId).eq('author_auth', authId).maybeSingle();
+  if (existing && existing.id) {
+    await supabase.from('reposts').delete().eq('id', existing.id);
+  } else {
+    await supabase.from('reposts').insert({ post_id: postId, author_auth: authId });
+  }
+
+  const { count } = await supabase.from('reposts').select('*', { count: 'exact', head: true }).eq('post_id', postId);
+  return { reposted: !existing, count: count || 0 };
 }
 
 // ── TẠO POST ────────────────────────────────────────────────────────────────
@@ -144,8 +172,8 @@ export async function fetchCommentsByPost(postId: string): Promise<PostComment[]
   return (data || []).map((c: any) => ({
     id: c.id,
     content: c.content,
-    createdAt: new Date(c.created_at).toLocaleString('vi-VN', { 
-      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' 
+    createdAt: new Date(c.created_at).toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
     }),
     likesCount: 0,
     author: {
@@ -197,10 +225,10 @@ export async function addComment(postId: string, userId: string, content: string
 export async function fetchBookings(): Promise<BookingRequest[]> {
   const { data, error } = await supabase
     .from('bookings').select('*').order('created_at', { ascending: false });
-    
+
   if (error) {
-     console.error("Error fetching bookings:", error);
-     return [];
+    console.error("Error fetching bookings:", error);
+    return [];
   }
   return (data || []).map((b: any) => ({
     id: b.id, customerName: b.customer_name,
@@ -229,7 +257,7 @@ export async function submitBooking(booking: BookingRequest) {
 export async function updateBookingStatus(id: string, status: string) {
   const { error } = await supabase.from('bookings').update({ status }).eq('id', id);
   if (error) {
-      console.error("Error updating booking status:", error);
+    console.error("Error updating booking status:", error);
   }
   return !error;
 }
@@ -258,7 +286,7 @@ export async function fetchUsers(): Promise<UserAuthor[]> {
     .from('users')
     .select('*')
     .order('created_at', { ascending: false });
-    
+
   if (error) {
     console.error("Error fetching users:", error);
     return [];
@@ -309,9 +337,9 @@ export async function signIn(email: string, password: string) {
   if (error) return { success: false, error: error.message };
   const { data: profile, error: profileError } = await supabase
     .from('users').select('*').eq('auth_id', data.user.id).single();
-  
+
   if (profileError || !profile) return { success: false, error: 'Không tìm thấy profile.' };
-  
+
   const user: UserAuthor = {
     id: profile.id, name: profile.name, email: profile.email,
     avatar: profile.avatar, role: profile.role as UserRole,
@@ -331,7 +359,7 @@ export async function getCurrentUser(): Promise<UserAuthor | null> {
   if (!session) return null;
   const { data: profile, error } = await supabase
     .from('users').select('*').eq('auth_id', session.user.id).single();
-  
+
   if (error || !profile) return null;
   return {
     id: profile.id, name: profile.name, email: profile.email,
@@ -351,7 +379,7 @@ export async function fetchUserPosts(userId: string) {
       .order('created_at', { ascending: false }),
     supabase.from('equipments').select('*')
   ]);
-    
+
   if (postsRes.error) {
     console.error("Error fetching user posts:", postsRes.error);
     return [];
@@ -359,7 +387,7 @@ export async function fetchUserPosts(userId: string) {
 
   const equipments = equipRes.data || [];
   const postIds = (postsRes.data || []).map((p: any) => p.id);
-  
+
   if (postIds.length === 0) return [];
 
   const [likesRes, commentsRes] = await Promise.all([
@@ -385,7 +413,7 @@ export async function fetchUserPosts(userId: string) {
   commentsData.forEach((c: any) => {
     commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
   });
-  
+
   return (postsRes.data || []).map((post: any) => ({
     ...post,
     author: {
@@ -396,8 +424,8 @@ export async function fetchUserPosts(userId: string) {
       roleTitle: post.author.role_title,
       isVerified: post.author.is_verified,
     },
-    createdAt: new Date(post.created_at).toLocaleString('vi-VN', { 
-      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' 
+    createdAt: new Date(post.created_at).toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
     }),
     taggedEquipment: equipments.find((eq: any) => eq.id === post.equipment_id) || null,
     likesCount: likeCountMap[post.id] || 0,
@@ -416,7 +444,7 @@ export async function updateUserProfile(userId: string, data: { name?: string; a
     .from('users')
     .update(updates)
     .eq('id', userId);
-    
+
   if (error) {
     console.error("Error updating profile:", error);
     return false;
@@ -429,7 +457,7 @@ export async function upgradeUserRole(userId: string, newRole: UserRole) {
     .from('users')
     .update({ role: newRole })
     .eq('id', userId);
-    
+
   if (error) {
     console.error("Error upgrading user:", error);
     return false;
@@ -517,7 +545,7 @@ export async function fetchDeletedPosts(userId: string) {
       .order('created_at', { ascending: false }),
     supabase.from('equipments').select('*')
   ]);
-    
+
   if (postsRes.error) {
     console.error("Error fetching deleted posts:", postsRes.error);
     return [];
@@ -525,7 +553,7 @@ export async function fetchDeletedPosts(userId: string) {
 
   const equipments = equipRes.data || [];
   const postIds = (postsRes.data || []).map((p: any) => p.id);
-  
+
   if (postIds.length === 0) return [];
 
   const [likesRes, commentsRes] = await Promise.all([
@@ -551,7 +579,7 @@ export async function fetchDeletedPosts(userId: string) {
   commentsData.forEach((c: any) => {
     commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
   });
-  
+
   return (postsRes.data || []).map((post: any) => ({
     ...post,
     author: {
@@ -562,8 +590,8 @@ export async function fetchDeletedPosts(userId: string) {
       roleTitle: post.author.role_title,
       isVerified: post.author.is_verified,
     },
-    createdAt: new Date(post.created_at).toLocaleString('vi-VN', { 
-      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' 
+    createdAt: new Date(post.created_at).toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
     }),
     taggedEquipment: equipments.find((eq: any) => eq.id === post.equipment_id) || null,
     likesCount: likeCountMap[post.id] || 0,
@@ -726,26 +754,44 @@ export async function getFollowersCountByUserId(userId: string): Promise<number>
   return count || 0;
 }
 
-export async function isFollowingUser(targetUserId: string): Promise<boolean> {
-  const currentAuthId = await getCurrentAuthId();
-  if (!currentAuthId) return false;
+export async function isFollowingUser(targetUserId: string, followerUserId?: string): Promise<boolean> {
+  // Try to resolve follower's auth id from session first
+  let followerAuthId: string | null = null;
+  if (followerUserId) {
+    followerAuthId = await getAuthIdByUserId(followerUserId);
+  }
+  if (!followerAuthId) {
+    followerAuthId = await getCurrentAuthId() as string | null;
+  }
+  if (!followerAuthId) return false;
   const targetAuth = await getAuthIdByUserId(targetUserId);
   if (!targetAuth) return false;
-  const { data, error } = await supabase.from('follows').select('id').eq('follower_auth', currentAuthId).eq('following_auth', targetAuth).maybeSingle();
+  const { data, error } = await supabase.from('follows').select('id').eq('follower_auth', followerAuthId).eq('following_auth', targetAuth).maybeSingle();
+  if (error) console.error('isFollowingUser: select error', error);
   return !!(data && data.id);
 }
 
-export async function toggleFollowUser(targetUserId: string): Promise<{ following: boolean; followersCount: number }> {
-  const currentAuthId = await getCurrentAuthId();
+export async function toggleFollowUser(targetUserId: string, followerUserId?: string): Promise<{ following: boolean; followersCount: number }> {
+  // Resolve current auth id either from session or from provided profile id
+  let currentAuthId = await getCurrentAuthId();
+  if (!currentAuthId && followerUserId) {
+    currentAuthId = (await getAuthIdByUserId(followerUserId)) ?? undefined;
+  }
   if (!currentAuthId) return { following: false, followersCount: 0 };
   const targetAuth = await getAuthIdByUserId(targetUserId);
   if (!targetAuth) return { following: false, followersCount: 0 };
 
-  const { data: existing } = await supabase.from('follows').select('id').eq('follower_auth', currentAuthId).eq('following_auth', targetAuth).maybeSingle();
+  // Check existing follow
+  const { data: existing, error: selErr } = await supabase.from('follows').select('id').eq('follower_auth', currentAuthId).eq('following_auth', targetAuth).maybeSingle();
+  if (selErr) console.error('toggleFollowUser: select error', selErr);
+
   if (existing && existing.id) {
-    await supabase.from('follows').delete().eq('id', existing.id);
+    const { error: delErr } = await supabase.from('follows').delete().eq('id', existing.id);
+    if (delErr) console.error('toggleFollowUser: delete error', delErr);
   } else {
-    await supabase.from('follows').insert({ follower_auth: currentAuthId, following_auth: targetAuth });
+    const { data: insData, error: insErr } = await supabase.from('follows').insert({ follower_auth: currentAuthId, following_auth: targetAuth }).select('id');
+    if (insErr) console.error('toggleFollowUser: insert error', insErr);
+    if (insData && insData.length === 0) console.warn('toggleFollowUser: insert returned no rows', insData);
   }
 
   const followers = await getFollowersCountByUserId(targetUserId);

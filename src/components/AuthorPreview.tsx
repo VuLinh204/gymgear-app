@@ -37,8 +37,17 @@ export const AuthorPreview: React.FC<Props> = ({ userId, className, onNavigate, 
     try {
       const res = await toggleFollowUser(userId);
       setFollowing(!!res.following);
-      if (typeof res.followersCount === 'number') setFollowers(res.followersCount);
-      else setFollowers(prev => prev ? prev + (res.following ? 1 : -1) : prev);
+      // refresh authoritative followers count from server, fall back to returned value or optimistic update
+      try {
+        const r = await fetch(`/api/follow?userId=${userId}`);
+        const b = await r.json();
+        if (typeof b.followersCount === 'number') setFollowers(b.followersCount);
+        else if (typeof res.followersCount === 'number') setFollowers(res.followersCount);
+        else setFollowers(prev => prev ? prev + (res.following ? 1 : -1) : (typeof res.followersCount === 'number' ? res.followersCount : prev));
+      } catch (e) {
+        if (typeof res.followersCount === 'number') setFollowers(res.followersCount);
+        else setFollowers(prev => prev ? prev + (res.following ? 1 : -1) : prev);
+      }
     } catch (e) { console.error(e); }
   };
 
