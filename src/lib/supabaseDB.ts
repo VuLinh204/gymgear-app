@@ -336,6 +336,18 @@ export async function submitBooking(booking: BookingRequest) {
     note: booking.note, user_role: booking.userRole
   }).select('id').single();
   if (error) return { success: false, error: error.message };
+
+  // Tạo thông báo lịch hẹn
+  createNotification({
+    userId: 'current_user',
+    actorId: 'system',
+    actorName: 'Hệ thống Showroom',
+    type: 'booking',
+    title: 'Đặt lịch Showroom thành công 📅',
+    content: `Lịch trải nghiệm ${booking.equipmentName || 'máy Gym'} tại ${booking.preferredLocation || 'Showroom'} đã được ghi nhận. Chuyên viên sẽ sớm liên hệ xác nhận.`,
+    targetId: data?.id,
+  });
+
   return { success: true, id: data?.id };
 }
 
@@ -881,6 +893,17 @@ export async function toggleFollowUser(targetUserId: string, followerUserId?: st
   } else {
     const { data: insData, error: insErr } = await supabase.from('follows').insert({ follower_auth: currentAuthId, following_auth: targetAuth }).select('id');
     if (insErr) console.error('toggleFollowUser: insert error', insErr);
+
+    // Bắn thông báo theo dõi mới
+    createNotification({
+      userId: targetUserId,
+      actorId: currentAuthId,
+      actorName: 'Một gymer',
+      type: 'follow',
+      title: 'Người theo dõi mới 👤',
+      content: 'Một thành viên vừa bắt đầu theo dõi hồ sơ của bạn.',
+      targetId: targetUserId,
+    });
   }
 
   const followers = await getFollowersCountByUserId(targetUserId);
@@ -1373,12 +1396,41 @@ function saveLocalNotifs(notifs: AppNotification[]) {
 }
 
 export async function fetchNotifications(userId?: string): Promise<AppNotification[]> {
-  // Bảng notifications chưa được tạo trong DB → chỉ dùng localStorage
-  // TODO: Khi tạo bảng notifications trong Supabase thì bỏ comment phần DB query bên dưới
+  // Bảng notifications chưa được tạo trong DB → dùng localStorage với sample + real notifications
   const local = getLocalNotifs();
   return local.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+}
+
+export async function createNotification(notif: {
+  userId?: string;
+  actorId?: string;
+  actorName?: string;
+  actorAvatar?: string;
+  type: 'like' | 'comment' | 'follow' | 'booking' | 'system' | 'pr';
+  title: string;
+  content: string;
+  targetId?: string;
+}): Promise<AppNotification> {
+  const newNotif: AppNotification = {
+    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    userId: notif.userId || 'current_user',
+    actorId: notif.actorId || 'current_user',
+    actorName: notif.actorName || 'Thành viên',
+    actorAvatar: notif.actorAvatar || '/default-avatar.svg',
+    type: notif.type,
+    title: notif.title,
+    content: notif.content,
+    targetId: notif.targetId,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  const list = getLocalNotifs();
+  // Đưa thông báo mới lên đầu
+  saveLocalNotifs([newNotif, ...list]);
+  return newNotif;
 }
 
 export async function markNotificationAsRead(id: string): Promise<boolean> {
@@ -1674,6 +1726,17 @@ export async function saveUserPR(
   const current = getLocalPRs();
   const updated = [newPR, ...current];
   saveLocalPRs(updated);
+
+  // Tạo thông báo chúc mừng kỷ lục mới
+  createNotification({
+    userId: 'current_user',
+    actorId: 'system',
+    actorName: 'Kỷ Lục Thể Lực',
+    type: 'pr',
+    title: 'Kỷ lục PR mới được xác lập! 🔥',
+    content: `Chúc mừng bạn đã đạt PR mới: ${exerciseName} ${weightKg}kg (${reps} reps).`,
+    targetId: newPR.id,
+  });
 
   // TODO: Đồng bộ Supabase khi bảng user_prs được tạo
   return newPR;

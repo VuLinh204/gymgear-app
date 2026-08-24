@@ -8,7 +8,10 @@ import {
   CalendarCheck, Crown, ShieldCheck, UserCheck, Send, LogIn, Loader2, Pin, Trash2, Pencil, RotateCcw, X,
   CornerDownRight, ChevronDown, ChevronUp, Reply
 } from 'lucide-react';
-import { toggleLike, addComment, fetchCommentsByPost, deletePost, hardDeletePost, restorePost, toggleBookmark, toggleCommentLike } from '@/lib/supabaseDB';
+import {
+  toggleLike, addComment, fetchCommentsByPost, deletePost, hardDeletePost,
+  restorePost, toggleBookmark, toggleCommentLike, createNotification
+} from '@/lib/supabaseDB';
 import Link from 'next/link';
 import AuthorPreview from './AuthorPreview';
 
@@ -536,6 +539,20 @@ export const PostCard: React.FC<PostCardProps> = ({
       const result = await toggleLike(post.id, currentUser.id);
       setLiked(result.liked);
       setLikesCount(result.newCount);
+
+      // Tạo thông báo nếu là hành động Thích bài viết
+      if (result.liked && currentUser.id !== post.author.id) {
+        createNotification({
+          userId: post.author.id,
+          actorId: currentUser.id,
+          actorName: currentUser.name || 'Một thành viên',
+          actorAvatar: currentUser.avatar,
+          type: 'like',
+          title: 'Lượt thích mới ❤️',
+          content: `${currentUser.name || 'Một thành viên'} đã thích bài viết của bạn.`,
+          targetId: post.id,
+        });
+      }
     } catch {
       setLiked(wasLiked);
       setLikesCount((prev) => wasLiked ? prev + 1 : prev - 1);
@@ -568,8 +585,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     e.preventDefault();
     if (isGuest) { requestAuth('login'); return; }
     if (!newCommentText.trim() || commentSubmitting) return;
+    const commentContent = newCommentText.trim();
     setCommentSubmitting(true);
-    const result = await addComment(post.id, currentUser.id, newCommentText.trim(), parentId, replyToUser);
+    const result = await addComment(post.id, currentUser.id, commentContent, parentId, replyToUser);
     if (result) {
       if (parentId) {
         // Nối vào danh sách replies của comment cha
@@ -587,6 +605,20 @@ export const PostCard: React.FC<PostCardProps> = ({
       }
       setCommentsCount((prev) => prev + 1);
       setNewCommentText('');
+
+      // Bắn thông báo tương tác bình luận
+      createNotification({
+        userId: post.author.id,
+        actorId: currentUser.id,
+        actorName: currentUser.name || 'Bạn bè',
+        actorAvatar: currentUser.avatar,
+        type: 'comment',
+        title: parentId ? 'Phản hồi bình luận 💬' : 'Bình luận mới 💬',
+        content: parentId
+          ? `${currentUser.name} đã trả lời bình luận: "${commentContent.slice(0, 45)}..."`
+          : `${currentUser.name} đã bình luận bài viết của bạn: "${commentContent.slice(0, 45)}..."`,
+        targetId: post.id,
+      });
     }
     setCommentSubmitting(false);
   };

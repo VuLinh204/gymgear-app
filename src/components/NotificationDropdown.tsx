@@ -11,6 +11,7 @@ import {
   CheckCheck, 
   Sparkles,
   ExternalLink,
+  UserPlus,
   X
 } from 'lucide-react';
 import { 
@@ -107,6 +108,8 @@ export default function NotificationDropdown({ onOpenBooking, onOpenPost }: Noti
         return <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />;
       case 'comment':
         return <MessageSquare className="w-3.5 h-3.5 text-sky-400 fill-sky-400/20" />;
+      case 'follow':
+        return <UserPlus className="w-3.5 h-3.5 text-blue-400" />;
       case 'booking':
         return <CalendarCheck className="w-3.5 h-3.5 text-emerald-400" />;
       case 'pr':
