@@ -103,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isPremium && (
               <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
                 <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span className="hidden xl:inline">VIP Premium</span>
+                <span className="hidden xl:inline">VIP</span>
               </div>
             )}
 

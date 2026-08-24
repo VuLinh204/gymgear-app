@@ -42,7 +42,7 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
       return (
         <span className="notranslate inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40" translate="no">
           <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-          <span>VIP PREMIUM</span>
+          <span>VIP</span>
         </span>
       );
     }
@@ -50,7 +50,7 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
       return (
         <span className="notranslate inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40" translate="no">
           <ShieldCheck className="w-3 h-3 text-red-400" />
-          <span>ADMINISTRATOR</span>
+          <span>Quản Trị</span>
         </span>
       );
     }
@@ -58,14 +58,14 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
       return (
         <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">
           <Eye className="w-3 h-3 text-slate-400" />
-          <span>GUEST (KHÁCH)</span>
+          <span>Khách</span>
         </span>
       );
     }
     return (
       <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
         <UserCheck className="w-3 h-3 text-blue-400" />
-        <span>USER THƯỜNG</span>
+        <span>Thành viên</span>
       </span>
     );
   };

@@ -197,7 +197,7 @@ export const registerDBUser = (name: string, email: string, role: UserRole = 'us
       ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
       : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     role,
-    roleTitle: roleTitle || (role === 'premium' ? 'Hội viên VIP Premium' : 'Thành viên mới'),
+    roleTitle: roleTitle || (role === 'premium' ? 'Hội viên VIP' : 'Thành viên'),
     isVerified: role === 'premium' || role === 'admin'
   };
 

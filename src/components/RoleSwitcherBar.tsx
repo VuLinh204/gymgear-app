@@ -25,7 +25,7 @@ export const RoleSwitcherBar: React.FC = () => {
     },
     {
       id: 'premium',
-      label: 'VIP Premium',
+      label: 'VIP',
       icon: <Crown className="w-3.5 h-3.5 text-amber-400" />,
       color: 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border-amber-500/50 font-bold',
       desc: 'Huy hiệu VIP, xem giá sỉ đại lý, ghim bài'

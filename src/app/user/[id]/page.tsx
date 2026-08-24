@@ -197,11 +197,11 @@ export default function UserProfilePage() {
                     <h1 className="text-2xl sm:text-3xl font-black text-white truncate">{profileUser.name}</h1>
                     {profileUser.role === 'premium' ? (
                       <span className="inline-flex items-center gap-1 text-amber-400 font-extrabold text-[10px] uppercase tracking-wider bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/30">
-                        <Crown className="w-3 h-3 fill-amber-400" /> VIP Premium
+                        <Crown className="w-3 h-3 fill-amber-400" /> VIP
                       </span>
                     ) : profileUser.role === 'admin' ? (
                       <span className="inline-flex items-center gap-1 text-red-400 font-bold text-[10px] uppercase tracking-wider bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/30">
-                        <ShieldCheck className="w-3 h-3" /> Administrator
+                        <ShieldCheck className="w-3 h-3" /> Quản Trị
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-blue-400 font-semibold text-[10px] uppercase tracking-wider bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
