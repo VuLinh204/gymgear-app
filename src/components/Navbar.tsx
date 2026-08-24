@@ -1,10 +1,12 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn, UserPlus, LogOut, ChevronDown, User, Settings, Sun, Moon, HelpCircle } from 'lucide-react';
+import {
+  Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn,
+  UserPlus, LogOut, ChevronDown, User, Settings, Sun, Moon, HelpCircle
+} from 'lucide-react';
 import Link from 'next/link';
 import NotificationDropdown from './NotificationDropdown';
+import GoogleTranslator from './GoogleTranslator';
 
 interface NavbarProps {
   onSearch: (query: string) => void;
@@ -104,6 +106,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="hidden xl:inline">VIP Premium</span>
               </div>
             )}
+
+            {/* Nút Đổi Ngôn Ngữ Tự Động Toàn Trang (Google Translate VI / EN) */}
+            <GoogleTranslator />
 
             {/* Nút Bảng Hướng Dẫn & Phím Tắt */}
             {onOpenGuide && (
@@ -214,12 +219,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* ── Mobile menu toggle ────────────────────────────────────────── */}
-          <button
-            className="md:hidden p-2 text-slate-300 hover:text-white rounded-lg bg-slate-900 border border-slate-800"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <GoogleTranslator />
+            <button
+              className="p-2 text-slate-300 hover:text-white rounded-lg bg-slate-900 border border-slate-800"
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         {/* ── Mobile dropdown ───────────────────────────────────────────────── */}
@@ -229,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
               <input
                 type="text"
-                placeholder="Tìm review máy gym..."
+                placeholder="Tìm máy tập, bài review, PT..."
                 value={searchQuery}
                 onChange={handleSearch}
                 className="w-full bg-slate-900 text-slate-200 text-xs rounded-xl pl-10 pr-4 py-2.5 border border-slate-800"
@@ -257,14 +265,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover border-2 border-amber-500" alt="" />
                   <div>
                     <p className="font-bold text-[var(--foreground)]">{currentUser.name}</p>
-                    <p className="text-[var(--foreground-dim)]">{currentUser.roleTitle}</p>
+                    <p className="text-[10px] text-[var(--foreground-dim)]">{currentUser.roleTitle}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => { setMobileOpen(false); logout(); }}
                   className="flex items-center gap-1 px-3 py-1.5 font-bold text-rose-400 bg-rose-500/10 rounded-xl border border-rose-500/30"
                 >
-                  <LogOut className="w-3.5 h-3.5" /> Xuất
+                  <LogOut className="w-3.5 h-3.5" /> Đăng Xuất
                 </button>
               </div>
             )}

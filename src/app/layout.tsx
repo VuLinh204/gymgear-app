@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 export const metadata: Metadata = {
   title: "GymGear - Mạng Xã Hội Review & Booking Máy Tập Gym",
@@ -22,14 +23,18 @@ export default function RootLayout({
             try{
               var t = localStorage.getItem('theme');
               if(t === 'light') document.documentElement.classList.add('theme-light');
+              var l = localStorage.getItem('gymgear_lang');
+              if(l) document.documentElement.lang = l;
             }catch(e){}
           })();
         `}} />
       </head>
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100" suppressHydrationWarning>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
