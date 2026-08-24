@@ -204,16 +204,18 @@ function AppLayout() {
       <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
-          {/* Left sidebar — sticky with own scroll */}
-          <div className="hidden lg:block lg:col-span-2 xl:col-span-3 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden sidebar-scroll">
-            <SocialSidebarLeft
-              activeCategory={activeCategory}
-              onSelectCategory={setActiveCategory}
-              onOpenBooking={() => handleOpenBooking(null)}
-              onOpenSaved={handleOpenSaved}
-              onOpenPRTracker={() => setPrModalOpen(true)}
-              onOpenCompare={() => setCompareModalOpen(true)}
-            />
+          {/* Left sidebar — sticks at top, reveals bottom content as page scrolls to end of feed */}
+          <div className="hidden lg:block lg:col-span-2 xl:col-span-3 self-stretch">
+            <div className="sticky top-20">
+              <SocialSidebarLeft
+                activeCategory={activeCategory}
+                onSelectCategory={setActiveCategory}
+                onOpenBooking={() => handleOpenBooking(null)}
+                onOpenSaved={handleOpenSaved}
+                onOpenPRTracker={() => setPrModalOpen(true)}
+                onOpenCompare={() => setCompareModalOpen(true)}
+              />
+            </div>
           </div>
 
           {/* Center feed */}
