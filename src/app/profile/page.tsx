@@ -12,6 +12,7 @@ import { EditPostModal } from '@/components/EditPostModal';
 import WorkoutPRModal from '@/components/WorkoutPRModal';
 import SpotlightSearchModal from '@/components/SpotlightSearchModal';
 import FeatureGuideModal from '@/components/FeatureGuideModal';
+import FollowListModal from '@/components/FollowListModal';
 import { AuthModal } from '@/components/AuthModal';
 import { 
   fetchUserPosts, 
@@ -19,7 +20,8 @@ import {
   fetchBookmarkedPosts, 
   fetchUserPRs, 
   UserPRRecord, 
-  getFollowersCountByUserId 
+  getFollowersCountByUserId,
+  getFollowingCountByUserId
 } from '@/lib/supabaseDB';
 import { SocialPost, Equipment } from '@/types';
 import { 
@@ -51,6 +53,7 @@ function ProfileContent() {
   const [savedPosts, setSavedPosts] = useState<SocialPost[]>([]);
   const [userPRs, setUserPRs] = useState<UserPRRecord[]>([]);
   const [followersCount, setFollowersCount] = useState<number>(38);
+  const [followingCount, setFollowingCount] = useState<number>(24);
   const [activeTab, setActiveTab] = useState<'my-posts' | 'prs' | 'saved' | 'trash'>('my-posts');
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +65,8 @@ function ProfileContent() {
   const [prModalOpen, setPrModalOpen] = useState(false);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState<'followers' | 'following'>('followers');
 
   useEffect(() => {
     const isSaved = searchParams?.get('saved') === 'true' || searchParams?.get('tab') === 'saved';
@@ -74,20 +79,24 @@ function ProfileContent() {
     if (!isGuest && currentUser) {
       const loadData = async () => {
         setLoading(true);
-        const [activeData, trashData, savedData, prData, count] = await Promise.all([
+        const [activeData, trashData, savedData, prData, fCount, fgCount] = await Promise.all([
           fetchUserPosts(currentUser.id),
           fetchDeletedPosts(currentUser.id),
           fetchBookmarkedPosts(currentUser.id),
           fetchUserPRs(),
-          getFollowersCountByUserId(currentUser.id)
+          getFollowersCountByUserId(currentUser.id),
+          getFollowingCountByUserId(currentUser.id),
         ]);
 
         setPosts(activeData);
         setDeletedPosts(trashData);
         setSavedPosts(savedData);
         setUserPRs(prData);
-        if (typeof count === 'number' && count > 0) {
-          setFollowersCount(count);
+        if (typeof fCount === 'number' && fCount > 0) {
+          setFollowersCount(fCount);
+        }
+        if (typeof fgCount === 'number' && fgCount > 0) {
+          setFollowingCount(fgCount);
         }
         setLoading(false);
       };
@@ -207,21 +216,44 @@ function ProfileContent() {
               </p>
 
               {/* Statistics row */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-6 mb-5 pt-1">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 sm:gap-3.5 mb-5 pt-1">
                 <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-center sm:text-left">
-                  <span className="text-xs text-slate-400 block">Bài review</span>
+                  <span className="text-[11px] text-slate-400 block">Bài review</span>
                   <strong className="text-sm sm:text-base font-extrabold text-white">{posts.length}</strong>
                 </div>
 
-                <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-center sm:text-left">
-                  <span className="text-xs text-slate-400 block">Người theo dõi</span>
-                  <strong className="text-sm sm:text-base font-extrabold text-amber-400">{followersCount}</strong>
-                </div>
+                <button
+                  onClick={() => {
+                    setFollowModalTab('followers');
+                    setFollowModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 transition text-center sm:text-left group cursor-pointer"
+                  title="Nhấp để xem danh sách người theo dõi"
+                >
+                  <span className="text-[11px] text-slate-400 block group-hover:text-slate-200">Người theo dõi</span>
+                  <strong className="text-sm sm:text-base font-extrabold text-amber-400 group-hover:text-amber-300">{followersCount}</strong>
+                </button>
 
-                <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-center sm:text-left">
-                  <span className="text-xs text-slate-400 block">Kỷ lục PR</span>
-                  <strong className="text-sm sm:text-base font-extrabold text-orange-400">{userPRs.length}</strong>
-                </div>
+                <button
+                  onClick={() => {
+                    setFollowModalTab('following');
+                    setFollowModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 transition text-center sm:text-left group cursor-pointer"
+                  title="Nhấp để xem danh sách đang theo dõi"
+                >
+                  <span className="text-[11px] text-slate-400 block group-hover:text-slate-200">Đang theo dõi</span>
+                  <strong className="text-sm sm:text-base font-extrabold text-sky-400 group-hover:text-sky-300">{followingCount}</strong>
+                </button>
+
+                <button
+                  onClick={() => setPrModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-orange-500/50 hover:bg-slate-900 transition text-center sm:text-left group cursor-pointer"
+                  title="Nhấp để quản lý kỷ lục PR"
+                >
+                  <span className="text-[11px] text-slate-400 block group-hover:text-slate-200">Kỷ lục PR</span>
+                  <strong className="text-sm sm:text-base font-extrabold text-orange-400 group-hover:text-orange-300">{userPRs.length}</strong>
+                </button>
               </div>
 
               {/* Action buttons */}
@@ -481,6 +513,14 @@ function ProfileContent() {
         onOpenPRTracker={() => setPrModalOpen(true)}
         onOpenCompare={() => {}}
         onOpenBooking={() => handleOpenBooking(null)}
+      />
+
+      <FollowListModal
+        isOpen={followModalOpen}
+        onClose={() => setFollowModalOpen(false)}
+        userId={currentUser.id}
+        userName={currentUser.name}
+        initialTab={followModalTab}
       />
 
       <AuthModal />

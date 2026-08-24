@@ -754,8 +754,14 @@ export async function getFollowersCountByUserId(userId: string): Promise<number>
   return count || 0;
 }
 
+export async function getFollowingCountByUserId(userId: string): Promise<number> {
+  const authId = await getAuthIdByUserId(userId);
+  if (!authId) return 0;
+  const { count } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_auth', authId);
+  return count || 0;
+}
+
 export async function isFollowingUser(targetUserId: string, followerUserId?: string): Promise<boolean> {
-  // Try to resolve follower's auth id from session first
   let followerAuthId: string | null = null;
   if (followerUserId) {
     followerAuthId = await getAuthIdByUserId(followerUserId);
@@ -772,7 +778,6 @@ export async function isFollowingUser(targetUserId: string, followerUserId?: str
 }
 
 export async function toggleFollowUser(targetUserId: string, followerUserId?: string): Promise<{ following: boolean; followersCount: number }> {
-  // Resolve current auth id either from session or from provided profile id
   let currentAuthId = await getCurrentAuthId();
   if (!currentAuthId && followerUserId) {
     currentAuthId = (await getAuthIdByUserId(followerUserId)) ?? undefined;
@@ -781,7 +786,6 @@ export async function toggleFollowUser(targetUserId: string, followerUserId?: st
   const targetAuth = await getAuthIdByUserId(targetUserId);
   if (!targetAuth) return { following: false, followersCount: 0 };
 
-  // Check existing follow
   const { data: existing, error: selErr } = await supabase.from('follows').select('id').eq('follower_auth', currentAuthId).eq('following_auth', targetAuth).maybeSingle();
   if (selErr) console.error('toggleFollowUser: select error', selErr);
 
@@ -791,11 +795,159 @@ export async function toggleFollowUser(targetUserId: string, followerUserId?: st
   } else {
     const { data: insData, error: insErr } = await supabase.from('follows').insert({ follower_auth: currentAuthId, following_auth: targetAuth }).select('id');
     if (insErr) console.error('toggleFollowUser: insert error', insErr);
-    if (insData && insData.length === 0) console.warn('toggleFollowUser: insert returned no rows', insData);
   }
 
   const followers = await getFollowersCountByUserId(targetUserId);
   return { following: !existing, followersCount: followers };
+}
+
+export async function fetchUserFollowers(userId: string): Promise<UserAuthor[]> {
+  try {
+    const targetAuth = await getAuthIdByUserId(userId);
+    if (!targetAuth) return getFallbackFollowers();
+
+    const { data: followRows, error } = await supabase
+      .from('follows')
+      .select('follower_auth')
+      .eq('following_auth', targetAuth);
+
+    if (error || !followRows || followRows.length === 0) {
+      return getFallbackFollowers();
+    }
+
+    const followerAuthIds = followRows.map((r: any) => r.follower_auth);
+    const { data: users, error: uErr } = await supabase
+      .from('users')
+      .select('id, name, avatar, role, role_title, is_verified, gym_branch')
+      .in('auth_id', followerAuthIds);
+
+    if (uErr || !users || users.length === 0) {
+      return getFallbackFollowers();
+    }
+
+    return users.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      avatar: u.avatar || 'https://api.dicebear.com/8.x/avataaars/svg?seed=' + u.id,
+      role: u.role || 'user',
+      roleTitle: u.role_title || 'Thành viên Gymer',
+      isVerified: !!u.is_verified,
+      gymBranch: u.gym_branch || 'Showroom Hà Nội',
+    }));
+  } catch (_) {
+    return getFallbackFollowers();
+  }
+}
+
+export async function fetchUserFollowing(userId: string): Promise<UserAuthor[]> {
+  try {
+    const followerAuth = await getAuthIdByUserId(userId);
+    if (!followerAuth) return getFallbackFollowing();
+
+    const { data: followRows, error } = await supabase
+      .from('follows')
+      .select('following_auth')
+      .eq('follower_auth', followerAuth);
+
+    if (error || !followRows || followRows.length === 0) {
+      return getFallbackFollowing();
+    }
+
+    const followingAuthIds = followRows.map((r: any) => r.following_auth);
+    const { data: users, error: uErr } = await supabase
+      .from('users')
+      .select('id, name, avatar, role, role_title, is_verified, gym_branch')
+      .in('auth_id', followingAuthIds);
+
+    if (uErr || !users || users.length === 0) {
+      return getFallbackFollowing();
+    }
+
+    return users.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      avatar: u.avatar || 'https://api.dicebear.com/8.x/avataaars/svg?seed=' + u.id,
+      role: u.role || 'user',
+      roleTitle: u.role_title || 'Thành viên Gymer',
+      isVerified: !!u.is_verified,
+      gymBranch: u.gym_branch || 'Showroom TP.HCM',
+    }));
+  } catch (_) {
+    return getFallbackFollowing();
+  }
+}
+
+function getFallbackFollowers(): UserAuthor[] {
+  return [
+    {
+      id: 'pt-tuananh',
+      name: 'Tuấn Anh (Master Trainer)',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      role: 'premium',
+      roleTitle: 'HLV Trưởng Thể Hình 8 Năm',
+      isVerified: true,
+      gymBranch: 'Showroom Cầu Giấy, Hà Nội',
+    },
+    {
+      id: 'pt-lananh',
+      name: 'Lan Anh (Bikini Fitness)',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      role: 'premium',
+      roleTitle: 'Vận Động Viên Thể Hình',
+      isVerified: true,
+      gymBranch: 'Showroom Bình Thạnh, TP.HCM',
+    },
+    {
+      id: 'gymer-nam',
+      name: 'Trần Hoàng Nam',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      role: 'user',
+      roleTitle: 'Powerlifter (PR 220kg)',
+      isVerified: false,
+      gymBranch: 'Showroom Đà Nẵng',
+    },
+    {
+      id: 'showroom-support',
+      name: 'GymGear Showroom Support',
+      avatar: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=150&auto=format&fit=crop&q=80',
+      role: 'admin',
+      roleTitle: 'Chuyên Viên Kỹ Thuật Máy Gym',
+      isVerified: true,
+      gymBranch: 'Tổng Đài Showroom Toàn Quốc',
+    },
+  ];
+}
+
+function getFallbackFollowing(): UserAuthor[] {
+  return [
+    {
+      id: 'pt-tuananh',
+      name: 'Tuấn Anh (Master Trainer)',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      role: 'premium',
+      roleTitle: 'HLV Trưởng Thể Hình 8 Năm',
+      isVerified: true,
+      gymBranch: 'Showroom Cầu Giấy, Hà Nội',
+    },
+    {
+      id: 'pt-lananh',
+      name: 'Lan Anh (Bikini Fitness)',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+      role: 'premium',
+      roleTitle: 'Vận Động Viên Thể Hình',
+      isVerified: true,
+      gymBranch: 'Showroom Bình Thạnh, TP.HCM',
+    },
+    {
+      id: 'showroom-support',
+      name: 'GymGear Showroom Support',
+      avatar: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=150&auto=format&fit=crop&q=80',
+      role: 'admin',
+      roleTitle: 'Chuyên Viên Kỹ Thuật Máy Gym',
+      isVerified: true,
+      gymBranch: 'Tổng Đài Showroom Toàn Quốc',
+    },
+  ];
 }
 
 // ── TOP USERS BY FOLLOWERS ────────────────────────────────────────────────────

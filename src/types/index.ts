@@ -49,6 +49,7 @@ export interface UserAuthor {
   role: UserRole;               // 'guest' | 'user' | 'premium' | 'admin'
   roleTitle?: string;           // Danh xưng: VD "Chủ Gym FitPlus", "HLV Chuyên Nghiệp"
   isVerified?: boolean;
+  gymBranch?: string;           // Chi nhánh / Showroom tập luyện
 }
 
 export interface PostComment {

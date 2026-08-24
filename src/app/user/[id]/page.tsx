@@ -10,8 +10,9 @@ import { EquipmentDetailModal } from '@/components/EquipmentDetailModal';
 import { BookingModal } from '@/components/BookingModal';
 import SpotlightSearchModal from '@/components/SpotlightSearchModal';
 import FeatureGuideModal from '@/components/FeatureGuideModal';
+import FollowListModal from '@/components/FollowListModal';
 import { AuthModal } from '@/components/AuthModal';
-import { fetchUserById, fetchUserPosts, isFollowingUser, toggleFollowUser, getFollowersCountByUserId } from '@/lib/supabaseDB';
+import { fetchUserById, fetchUserPosts, isFollowingUser, toggleFollowUser, getFollowersCountByUserId, getFollowingCountByUserId } from '@/lib/supabaseDB';
 import { SocialPost, Equipment, UserAuthor } from '@/types';
 import { Crown, ShieldCheck, UserCheck, Loader2, ArrowLeft, UserCircle2, UserPlus, Users, Newspaper } from 'lucide-react';
 import Link from 'next/link';
@@ -23,6 +24,7 @@ export default function UserProfilePage() {
 
   const [profileUser, setProfileUser] = useState<UserAuthor | null>(null);
   const [followersCount, setFollowersCount] = useState<number>(45);
+  const [followingCount, setFollowingCount] = useState<number>(20);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -35,6 +37,8 @@ export default function UserProfilePage() {
   const [bookingEquipment, setBookingEquipment] = useState<Equipment | null>(null);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [followModalOpen, setFollowModalOpen] = useState(false);
+  const [followModalTab, setFollowModalTab] = useState<'followers' | 'following'>('followers');
 
   const handleOpenBooking = (equipment?: Equipment | null) => {
     setBookingEquipment(equipment || null);
@@ -52,15 +56,19 @@ export default function UserProfilePage() {
 
     const load = async () => {
       setLoading(true);
-      const [user, userPosts, count, following] = await Promise.all([
+      const [user, userPosts, count, following, fgCount] = await Promise.all([
         fetchUserById(id),
         fetchUserPosts(id),
         getFollowersCountByUserId(id),
-        isFollowingUser(id)
+        isFollowingUser(id),
+        getFollowingCountByUserId(id),
       ]);
 
       if (typeof count === 'number' && count > 0) {
         setFollowersCount(count);
+      }
+      if (typeof fgCount === 'number' && fgCount > 0) {
+        setFollowingCount(fgCount);
       }
       setIsFollowing(!!following);
 
@@ -172,16 +180,35 @@ export default function UserProfilePage() {
                   </p>
 
                   {/* Stats & Follow Action row */}
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 pt-1">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 sm:gap-3.5 pt-1">
                     <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-center sm:text-left">
-                      <span className="text-xs text-slate-400 block">Bài viết</span>
+                      <span className="text-[11px] text-slate-400 block">Bài viết</span>
                       <strong className="text-sm sm:text-base font-extrabold text-white">{posts.length}</strong>
                     </div>
 
-                    <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-center sm:text-left">
-                      <span className="text-xs text-slate-400 block">Người theo dõi</span>
-                      <strong className="text-sm sm:text-base font-extrabold text-amber-400">{followersCount}</strong>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setFollowModalTab('followers');
+                        setFollowModalOpen(true);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 transition text-center sm:text-left group cursor-pointer"
+                      title="Nhấp để xem người theo dõi"
+                    >
+                      <span className="text-[11px] text-slate-400 block group-hover:text-slate-200">Người theo dõi</span>
+                      <strong className="text-sm sm:text-base font-extrabold text-amber-400 group-hover:text-amber-300">{followersCount}</strong>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setFollowModalTab('following');
+                        setFollowModalOpen(true);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 transition text-center sm:text-left group cursor-pointer"
+                      title="Nhấp để xem đang theo dõi"
+                    >
+                      <span className="text-[11px] text-slate-400 block group-hover:text-slate-200">Đang theo dõi</span>
+                      <strong className="text-sm sm:text-base font-extrabold text-sky-400 group-hover:text-sky-300">{followingCount}</strong>
+                    </button>
 
                     <button
                       onClick={handleFollow}
@@ -272,6 +299,14 @@ export default function UserProfilePage() {
         onOpenPRTracker={() => {}}
         onOpenCompare={() => {}}
         onOpenBooking={() => handleOpenBooking(null)}
+      />
+
+      <FollowListModal
+        isOpen={followModalOpen}
+        onClose={() => setFollowModalOpen(false)}
+        userId={id}
+        userName={profileUser?.name}
+        initialTab={followModalTab}
       />
 
       <AuthModal />
