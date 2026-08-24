@@ -38,6 +38,7 @@ function AppLayout() {
   const [selectedMuscle, setSelectedMuscle] = useState('Tất cả nhóm cơ');
   const [selectedPriceRange, setSelectedPriceRange] = useState('all');
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Modals
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
@@ -53,9 +54,14 @@ function AppLayout() {
   // 1. Tải bài viết
   useEffect(() => {
     const loadPosts = async () => {
-      const userId = currentUser.role !== 'guest' ? currentUser.id : undefined;
-      const data = await fetchPosts(userId);
-      setPosts(data);
+      setLoading(true);
+      try {
+        const userId = currentUser.role !== 'guest' ? currentUser.id : undefined;
+        const data = await fetchPosts(userId);
+        setPosts(data);
+      } finally {
+        setLoading(false);
+      }
     };
     loadPosts();
   }, [currentUser.id]);
@@ -233,7 +239,51 @@ function AppLayout() {
             />
 
             {/* Posts Stream */}
-            {filteredPosts.length > 0 ? (
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-4 animate-pulse"
+                  >
+                    {/* Author header skeleton */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-full bg-slate-800 border border-slate-700/50" />
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 bg-slate-800 rounded w-28" />
+                            <div className="h-3.5 bg-slate-800/60 rounded w-16" />
+                          </div>
+                          <div className="h-3 bg-slate-800/50 rounded w-20" />
+                        </div>
+                      </div>
+                      <div className="w-6 h-6 bg-slate-800 rounded-full" />
+                    </div>
+
+                    {/* Content text skeleton */}
+                    <div className="space-y-2 pt-1">
+                      <div className="h-3.5 bg-slate-800 rounded w-full" />
+                      <div className="h-3.5 bg-slate-800/70 rounded w-5/6" />
+                      <div className="h-3.5 bg-slate-800/40 rounded w-2/3" />
+                    </div>
+
+                    {/* Media container skeleton */}
+                    <div className="w-full h-64 bg-slate-800/60 rounded-2xl border border-slate-800" />
+
+                    {/* Footer action bar skeleton */}
+                    <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-7 bg-slate-800 rounded-xl w-16" />
+                        <div className="h-7 bg-slate-800 rounded-xl w-16" />
+                        <div className="h-7 bg-slate-800 rounded-xl w-16" />
+                      </div>
+                      <div className="h-7 bg-slate-800 rounded-xl w-8" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredPosts.length > 0 ? (
               <div className="space-y-4">
                 {filteredPosts.map((post) => (
                   <PostCard

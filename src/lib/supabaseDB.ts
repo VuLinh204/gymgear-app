@@ -1558,40 +1558,9 @@ function saveLocalPRs(prs: UserPRRecord[]) {
 }
 
 export async function fetchUserPRs(userId?: string): Promise<UserPRRecord[]> {
-  let dbPRs: UserPRRecord[] = [];
-  try {
-    const authId = await getCurrentAuthId();
-    if (authId) {
-      const { data, error } = await supabase
-        .from('user_prs')
-        .select('*')
-        .or(`user_id.eq.${authId},user_id.eq.current_user`)
-        .order('achieved_at', { ascending: false });
-
-      if (!error && data) {
-        dbPRs = data.map((p: any) => ({
-          id: p.id,
-          userId: p.user_id,
-          exerciseName: p.exercise_name,
-          weightKg: Number(p.weight_kg),
-          reps: p.reps || 1,
-          notes: p.notes,
-          equipmentId: p.equipment_id,
-          achievedAt: p.achieved_at || p.created_at,
-          createdAt: p.created_at,
-        }));
-      }
-    }
-  } catch (e) {
-    console.warn('Lỗi khi fetch PRs từ DB:', e);
-  }
-
+  // Dùng localStorage cho Kỷ lục PRs để tránh lỗi 404 khi bảng user_prs chưa chạy SQL
   const local = getLocalPRs();
-  const prMap = new Map<string, UserPRRecord>();
-  local.forEach(p => prMap.set(p.id, p));
-  dbPRs.forEach(p => prMap.set(p.id, p));
-
-  return Array.from(prMap.values()).sort(
+  return local.sort(
     (a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime()
   );
 }
@@ -1620,31 +1589,14 @@ export async function saveUserPR(
   const updated = [newPR, ...current];
   saveLocalPRs(updated);
 
-  try {
-    const authId = await getCurrentAuthId();
-    if (authId) {
-      newPR.userId = authId;
-      await supabase.from('user_prs').insert({
-        user_id: authId,
-        exercise_name: exerciseName,
-        weight_kg: weightKg,
-        reps,
-        notes: notes || null,
-        equipment_id: equipmentId || null,
-        achieved_at: now,
-      });
-    }
-  } catch (_) {}
-
+  // TODO: Đồng bộ Supabase khi bảng user_prs được tạo
   return newPR;
 }
 
 export async function deleteUserPR(prId: string): Promise<boolean> {
   const current = getLocalPRs();
   saveLocalPRs(current.filter(p => p.id !== prId));
-  try {
-    await supabase.from('user_prs').delete().eq('id', prId);
-  } catch (_) {}
+  // TODO: await supabase.from('user_prs').delete().eq('id', prId);
   return true;
 }
 

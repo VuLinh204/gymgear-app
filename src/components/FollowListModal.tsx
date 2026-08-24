@@ -223,9 +223,22 @@ export default function FollowListModal({
         {/* User list */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2.5 divide-y divide-slate-800/40">
           {loading ? (
-            <div className="py-16 text-center text-slate-500 flex flex-col items-center gap-2">
-              <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-              <span className="text-xs">Đang tải danh sách thành viên...</span>
+            <div className="space-y-3 p-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-3 p-2 rounded-2xl animate-pulse"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-slate-800 shrink-0 border border-slate-700/50" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-3.5 bg-slate-800 rounded-md w-28" />
+                      <div className="h-2.5 bg-slate-800/60 rounded-md w-36" />
+                    </div>
+                  </div>
+                  <div className="w-20 h-7 bg-slate-800 rounded-xl shrink-0" />
+                </div>
+              ))}
             </div>
           ) : filteredList.length > 0 ? (
             filteredList.map(item => {

@@ -120,9 +120,48 @@ export default function UserProfilePage() {
         </button>
 
         {loading ? (
-          <div className="flex justify-center items-center py-32 text-slate-500 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-            <span className="text-sm">Đang tải hồ sơ người dùng...</span>
+          <div className="space-y-6">
+            {/* Profile Hero Skeleton */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 animate-pulse space-y-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-slate-800 border-4 border-slate-700/50 shrink-0" />
+                <div className="flex-1 space-y-3 text-center sm:text-left">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                    <div className="h-7 bg-slate-800 rounded-lg w-44" />
+                    <div className="h-6 bg-slate-800/60 rounded-full w-28" />
+                  </div>
+                  <div className="h-4 bg-slate-800/60 rounded w-56 mx-auto sm:mx-0" />
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 pt-2">
+                    <div className="h-9 bg-slate-800/70 rounded-2xl w-32" />
+                    <div className="h-9 bg-slate-800/70 rounded-2xl w-32" />
+                    <div className="h-9 bg-slate-800/70 rounded-2xl w-28" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Post Skeletons */}
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-4 animate-pulse"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-slate-800" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 bg-slate-800 rounded w-32" />
+                      <div className="h-3 bg-slate-800/50 rounded w-20" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3.5 bg-slate-800 rounded w-full" />
+                    <div className="h-3.5 bg-slate-800/70 rounded w-3/4" />
+                  </div>
+                  <div className="w-full h-52 bg-slate-800/60 rounded-2xl" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : notFound ? (
           <div className="text-center py-24 bg-slate-900/60 rounded-3xl border border-slate-800 space-y-4">

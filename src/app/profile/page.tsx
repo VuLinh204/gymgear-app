@@ -324,9 +324,26 @@ function ProfileContent() {
         {/* Tab Content Feed */}
         <div className="space-y-4 pt-2">
           {loading ? (
-            <div className="flex justify-center items-center py-20 text-slate-500 gap-3">
-              <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-              <span>Đang tải dữ liệu hồ sơ...</span>
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-4 animate-pulse"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-slate-800 border border-slate-700/50" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-4 bg-slate-800 rounded w-32" />
+                      <div className="h-3 bg-slate-800/50 rounded w-20" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3.5 bg-slate-800 rounded w-full" />
+                    <div className="h-3.5 bg-slate-800/70 rounded w-4/5" />
+                  </div>
+                  <div className="w-full h-48 bg-slate-800/60 rounded-2xl" />
+                </div>
+              ))}
             </div>
           ) : activeTab === 'my-posts' ? (
             posts.length > 0 ? (

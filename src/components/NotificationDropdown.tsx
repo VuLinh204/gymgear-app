@@ -28,12 +28,16 @@ interface NotificationDropdownProps {
 export default function NotificationDropdown({ onOpenBooking, onOpenPost }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'social' | 'booking'>('all');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const loadNotifs = async () => {
-    const data = await fetchNotifications();
-    setNotifications(data);
+    try {
+      const data = await fetchNotifications();
+      setNotifications(data);
+    } catch (_) {}
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -199,7 +203,23 @@ export default function NotificationDropdown({ onOpenBooking, onOpenPost }: Noti
 
           {/* List Notifications */}
           <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-800/60">
-            {filteredNotifs.length > 0 ? (
+            {loading ? (
+              <div className="divide-y divide-slate-800/60">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-3 flex items-start gap-3 animate-pulse">
+                    <div className="w-9 h-9 rounded-full bg-slate-800 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="h-3 bg-slate-800 rounded w-24" />
+                        <div className="h-2 bg-slate-800/60 rounded w-10" />
+                      </div>
+                      <div className="h-2.5 bg-slate-800/70 rounded w-full" />
+                      <div className="h-2.5 bg-slate-800/50 rounded w-3/4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredNotifs.length > 0 ? (
               filteredNotifs.map((notif) => (
                 <div
                   key={notif.id}

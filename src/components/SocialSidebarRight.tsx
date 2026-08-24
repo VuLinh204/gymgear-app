@@ -19,12 +19,21 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
   const { isGuest, requestAuth } = useAuth();
   const [topEquipments, setTopEquipments] = useState<Equipment[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
+  const [equipLoading, setEquipLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [followLoading, setFollowLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchEquipments().then(data => setTopEquipments(data.slice(0, 3)));
-    getTopUsersByFollowers(3).then(setTopUsers);
+    fetchEquipments().then(data => {
+      setTopEquipments(data.slice(0, 3));
+      setEquipLoading(false);
+    }).catch(() => setEquipLoading(false));
+
+    getTopUsersByFollowers(3).then(data => {
+      setTopUsers(data);
+      setUsersLoading(false);
+    }).catch(() => setUsersLoading(false));
   }, []);
 
   // Kiểm tra trạng thái follow của từng user
@@ -92,39 +101,55 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
         </div>
 
         <div className="space-y-3 divide-y divide-slate-800/80">
-          {topEquipments.map((eq, idx) => (
-            <div key={eq.id} className="pt-3 first:pt-0 flex items-center space-x-3 group">
-              <span className="text-sm font-black text-amber-500 w-4 text-center">#{idx + 1}</span>
-              <img
-                src={eq.thumbnail}
-                alt={eq.name}
-                className="w-12 h-12 rounded-xl object-cover border border-slate-800 group-hover:scale-105 transition-transform"
-              />
-              <div className="flex-1 min-w-0">
-                <h5
-                  onClick={() => onViewEquipment(eq)}
-                  className="text-xs font-bold text-white truncate hover:text-amber-400 cursor-pointer"
-                >
-                  {eq.name}
-                </h5>
-                <div className="flex items-center space-x-2 text-[11px] text-slate-400">
-                  <div className="flex items-center text-amber-400">
-                    <Star className="w-3 h-3 fill-amber-400" />
-                    <span className="font-bold ml-0.5">{eq.rating}</span>
+          {equipLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center space-x-3 animate-pulse">
+                  <div className="w-4 h-4 bg-slate-800 rounded" />
+                  <div className="w-12 h-12 rounded-xl bg-slate-800 shrink-0" />
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    <div className="h-3 bg-slate-800 rounded w-28" />
+                    <div className="h-2.5 bg-slate-800/60 rounded w-20" />
                   </div>
-                  <span>•</span>
-                  <span>{eq.priceRange}</span>
+                  <div className="w-7 h-7 bg-slate-800 rounded-lg shrink-0" />
                 </div>
-              </div>
-              <button
-                onClick={() => onOpenBooking(eq)}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500 text-slate-300 hover:text-slate-950 transition-colors"
-                title="Đặt lịch thử máy này"
-              >
-                <CalendarCheck className="w-4 h-4" />
-              </button>
+              ))}
             </div>
-          ))}
+          ) : (
+            topEquipments.map((eq, idx) => (
+              <div key={eq.id} className="pt-3 first:pt-0 flex items-center space-x-3 group">
+                <span className="text-sm font-black text-amber-500 w-4 text-center">#{idx + 1}</span>
+                <img
+                  src={eq.thumbnail}
+                  alt={eq.name}
+                  className="w-12 h-12 rounded-xl object-cover border border-slate-800 group-hover:scale-105 transition-transform"
+                />
+                <div className="flex-1 min-w-0">
+                  <h5
+                    onClick={() => onViewEquipment(eq)}
+                    className="text-xs font-bold text-white truncate hover:text-amber-400 cursor-pointer"
+                  >
+                    {eq.name}
+                  </h5>
+                  <div className="flex items-center space-x-2 text-[11px] text-slate-400">
+                    <div className="flex items-center text-amber-400">
+                      <Star className="w-3 h-3 fill-amber-400" />
+                      <span className="font-bold ml-0.5">{eq.rating}</span>
+                    </div>
+                    <span>•</span>
+                    <span>{eq.priceRange}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onOpenBooking(eq)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-amber-500 text-slate-300 hover:text-slate-950 transition-colors"
+                  title="Đặt lịch thử máy này"
+                >
+                  <CalendarCheck className="w-4 h-4" />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -138,7 +163,22 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
           <Link href="/community" className="text-[10px] text-amber-400 hover:underline">Xem tất cả</Link>
         </div>
 
-        {topUsers.length === 0 ? (
+        {usersLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between animate-pulse">
+                <div className="flex items-center space-x-2 flex-1">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-3 bg-slate-800 rounded w-24" />
+                    <div className="h-2 bg-slate-800/60 rounded w-16" />
+                  </div>
+                </div>
+                <div className="w-16 h-6 bg-slate-800 rounded-lg shrink-0" />
+              </div>
+            ))}
+          </div>
+        ) : topUsers.length === 0 ? (
           <p className="text-[11px] text-slate-500 text-center py-2">Chưa có dữ liệu</p>
         ) : (
           <div className="space-y-3 text-xs">

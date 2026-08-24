@@ -136,29 +136,43 @@ export default function StoriesBar() {
           </span>
         </div>
 
-        {/* Danh sách Stories của các thành viên khác */}
-        {uniqueStories
-          .filter((s) => !isMyStory(s))
-          .map((story) => (
-            <button
-              key={story.id}
-              onClick={() => handleViewAuthorStories(story)}
-              className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none"
-            >
-              <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 hover:scale-105 transition-transform shadow-lg shadow-orange-500/20">
-                <div className="w-full h-full rounded-full border-2 border-slate-950 overflow-hidden">
-                  <img
-                    src={story.authorAvatar}
-                    alt={story.authorName}
-                    className="w-full h-full object-cover"
-                  />
+        {/* Skeletons khi đang load stories */}
+        {loading ? (
+          <>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex flex-col items-center gap-1.5 shrink-0 animate-pulse">
+                <div className="w-16 h-16 rounded-full p-0.5 bg-slate-800/80">
+                  <div className="w-full h-full rounded-full bg-slate-800 border-2 border-slate-950" />
                 </div>
+                <div className="h-2.5 bg-slate-800 rounded w-12" />
               </div>
-              <span className="text-[11px] font-medium text-slate-300 group-hover:text-white transition-colors w-16 text-center truncate">
-                {story.authorName}
-              </span>
-            </button>
-          ))}
+            ))}
+          </>
+        ) : (
+          /* Danh sách Stories của các thành viên khác */
+          uniqueStories
+            .filter((s) => !isMyStory(s))
+            .map((story) => (
+              <button
+                key={story.id}
+                onClick={() => handleViewAuthorStories(story)}
+                className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none"
+              >
+                <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 hover:scale-105 transition-transform shadow-lg shadow-orange-500/20">
+                  <div className="w-full h-full rounded-full border-2 border-slate-950 overflow-hidden">
+                    <img
+                      src={story.authorAvatar}
+                      alt={story.authorName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+                <span className="text-[11px] font-medium text-slate-300 group-hover:text-white transition-colors w-16 text-center truncate">
+                  {story.authorName}
+                </span>
+              </button>
+            ))
+        )}
       </div>
 
       {/* Input chọn ảnh ẩn */}
