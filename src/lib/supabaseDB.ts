@@ -1082,60 +1082,37 @@ export async function fetchActiveStories(): Promise<Story[]> {
   let dbStories: Story[] = [];
 
   try {
-    // 1. Thử query có join bảng users
-    const { data, error } = await supabase
+    // Query stories kèm thông tin author (2 bước để tránh lỗi FK)
+    const { data: rawData, error: rawError } = await supabase
       .from('stories')
-      .select('*, author:users(*)')
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      const nowTime = Date.now();
-      dbStories = data
-        .filter((s: any) => !s.expires_at || new Date(s.expires_at).getTime() > nowTime)
-        .map((s: any) => ({
-          id: s.id,
-          authorId: s.author?.id || s.author_id || s.author_auth || '',
-          authorAuth: s.author_auth || '',
-          authorName: s.author?.name || 'Thành viên',
-          authorAvatar: s.author?.avatar || '/default-avatar.svg',
-          imageUrl: s.image_url,
-          caption: s.caption,
-          createdAt: s.created_at || new Date().toISOString(),
-          expiresAt: s.expires_at || new Date(Date.now() + 86400000).toISOString(),
-        }));
-    } else if (error) {
-      // 2. Fallback nếu join author:users không khả dụng
-      const { data: rawData, error: rawError } = await supabase
-        .from('stories')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!rawError && rawData) {
-        const userIds = Array.from(new Set(rawData.map((s: any) => s.author_id).filter(Boolean)));
-        let userMap: Record<string, any> = {};
-        if (userIds.length > 0) {
-          const { data: usersData } = await supabase.from('users').select('id, name, avatar').in('id', userIds);
-          (usersData || []).forEach((u: any) => { userMap[u.id] = u; });
-        }
-
-        const nowTime = Date.now();
-        dbStories = rawData
-          .filter((s: any) => !s.expires_at || new Date(s.expires_at).getTime() > nowTime)
-          .map((s: any) => {
-            const user = userMap[s.author_id];
-            return {
-              id: s.id,
-              authorId: s.author_id || s.author_auth || '',
-              authorAuth: s.author_auth || '',
-              authorName: user?.name || 'Thành viên',
-              authorAvatar: user?.avatar || '/default-avatar.svg',
-              imageUrl: s.image_url,
-              caption: s.caption,
-              createdAt: s.created_at || new Date().toISOString(),
-              expiresAt: s.expires_at || new Date(Date.now() + 86400000).toISOString(),
-            };
-          });
+    if (!rawError && rawData) {
+      const userIds = Array.from(new Set(rawData.map((s: any) => s.author_id).filter(Boolean)));
+      let userMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: usersData } = await supabase.from('users').select('id, name, avatar').in('id', userIds);
+        (usersData || []).forEach((u: any) => { userMap[u.id] = u; });
       }
+
+      const nowTime = Date.now();
+      dbStories = rawData
+        .filter((s: any) => !s.expires_at || new Date(s.expires_at).getTime() > nowTime)
+        .map((s: any) => {
+          const user = userMap[s.author_id];
+          return {
+            id: s.id,
+            authorId: s.author_id || s.author_auth || '',
+            authorAuth: s.author_auth || '',
+            authorName: user?.name || 'Thành viên',
+            authorAvatar: user?.avatar || '/default-avatar.svg',
+            imageUrl: s.image_url,
+            caption: s.caption,
+            createdAt: s.created_at || new Date().toISOString(),
+            expiresAt: s.expires_at || new Date(Date.now() + 86400000).toISOString(),
+          };
+        });
     }
   } catch (err) {
     console.warn('Lỗi khi tải stories từ Supabase:', err);
@@ -1320,7 +1297,10 @@ export async function fetchNotifications(userId?: string): Promise<AppNotificati
         .or(`user_id.eq.${authId},user_id.eq.current_user`)
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      // Nếu bảng không tồn tại (404/42P01) thì bỏ qua, dùng localStorage
+      if (error && (error.code === '42P01' || (error as any).status === 404 || error.message?.includes('does not exist'))) {
+        // Bảng notifications chưa được tạo, dùng localStorage thôi
+      } else if (!error && data) {
         dbNotifs = data.map((n: any) => ({
           id: n.id,
           userId: n.user_id,
@@ -1337,7 +1317,7 @@ export async function fetchNotifications(userId?: string): Promise<AppNotificati
       }
     }
   } catch (e) {
-    console.warn('Lỗi khi fetch notifications từ DB:', e);
+    // Bảng chưa tồn tại hoặc lỗi mạng → dùng localStorage
   }
 
   const local = getLocalNotifs();
