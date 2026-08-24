@@ -1287,45 +1287,10 @@ function saveLocalNotifs(notifs: AppNotification[]) {
 }
 
 export async function fetchNotifications(userId?: string): Promise<AppNotification[]> {
-  let dbNotifs: AppNotification[] = [];
-  try {
-    const authId = await getCurrentAuthId();
-    if (authId) {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .or(`user_id.eq.${authId},user_id.eq.current_user`)
-        .order('created_at', { ascending: false });
-
-      // Nếu bảng không tồn tại (404/42P01) thì bỏ qua, dùng localStorage
-      if (error && (error.code === '42P01' || (error as any).status === 404 || error.message?.includes('does not exist'))) {
-        // Bảng notifications chưa được tạo, dùng localStorage thôi
-      } else if (!error && data) {
-        dbNotifs = data.map((n: any) => ({
-          id: n.id,
-          userId: n.user_id,
-          actorId: n.actor_id,
-          actorName: n.actor_name || 'Hệ thống',
-          actorAvatar: n.actor_avatar || '/default-avatar.svg',
-          type: n.type || 'system',
-          title: n.title,
-          content: n.content,
-          targetId: n.target_id,
-          isRead: !!n.is_read,
-          createdAt: n.created_at,
-        }));
-      }
-    }
-  } catch (e) {
-    // Bảng chưa tồn tại hoặc lỗi mạng → dùng localStorage
-  }
-
+  // Bảng notifications chưa được tạo trong DB → chỉ dùng localStorage
+  // TODO: Khi tạo bảng notifications trong Supabase thì bỏ comment phần DB query bên dưới
   const local = getLocalNotifs();
-  const notifMap = new Map<string, AppNotification>();
-  local.forEach(n => notifMap.set(n.id, n));
-  dbNotifs.forEach(n => notifMap.set(n.id, n));
-
-  return Array.from(notifMap.values()).sort(
+  return local.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
@@ -1334,10 +1299,7 @@ export async function markNotificationAsRead(id: string): Promise<boolean> {
   const local = getLocalNotifs();
   const updated = local.map(n => n.id === id ? { ...n, isRead: true } : n);
   saveLocalNotifs(updated);
-
-  try {
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-  } catch (_) {}
+  // TODO: await supabase.from('notifications').update({ is_read: true }).eq('id', id);
   return true;
 }
 
@@ -1345,13 +1307,7 @@ export async function markAllNotificationsAsRead(): Promise<boolean> {
   const local = getLocalNotifs();
   const updated = local.map(n => ({ ...n, isRead: true }));
   saveLocalNotifs(updated);
-
-  try {
-    const authId = await getCurrentAuthId();
-    if (authId) {
-      await supabase.from('notifications').update({ is_read: true }).eq('user_id', authId);
-    }
-  } catch (_) {}
+  // TODO: await supabase.from('notifications').update({ is_read: true }).eq('user_id', authId);
   return true;
 }
 
