@@ -65,7 +65,7 @@
 }
 .theme-light .fill-amber-400 { fill: #b75320 !important; }
 .theme-light .bg-amber-500 { background-color: #f97316 !important; }
-.theme-light .bg-amber-500\/:\/10 { background-color: rgba(249,115,22,0.08) !important; }
+.theme-light .bg-amber-500\/10 { background-color: rgba(249,115,22,0.08) !important; }
 .theme-light .border-amber-500 { border-color: #f97316 !important; }
 
 /* Navbar in light mode */
@@ -83,6 +83,29 @@
 .theme-light ::-webkit-scrollbar-track { background: #e6eef6; }
 .theme-light ::-webkit-scrollbar-thumb { background: #94a3b8; }
 .theme-light ::-webkit-scrollbar-thumb:hover { background: #b75320; }
+
+/* ── Ensure all interactive buttons, links, clickable tags have cursor: pointer ── */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[href],
+a:not([aria-disabled="true"]),
+summary,
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+input[type="file"]::-webkit-file-upload-button,
+label[for] {
+  cursor: pointer !important;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+input:disabled {
+  cursor: not-allowed !important;
+}
 
 body {
   background: var(--background);
