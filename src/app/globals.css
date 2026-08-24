@@ -134,6 +134,33 @@ body {
   display: none;
 }
 
+/* Utility: sidebar scroll – hidden by default, thin bar on hover */
+.sidebar-scroll {
+  scrollbar-width: none; /* Firefox: hidden by default */
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0px;
+  transition: width 0.2s ease;
+}
+.sidebar-scroll:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.35) transparent; /* Firefox */
+}
+.sidebar-scroll:hover::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+}
+
 /* ── Google Translate Clean Overrides & Layout Stabilization ── */
 html, body {
   top: 0px !important;
