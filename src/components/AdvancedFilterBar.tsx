@@ -75,14 +75,14 @@ export default function AdvancedFilterBar({
               <button
                 key={tab.id}
                 onClick={() => onSortChange(tab.id as FeedSortOption)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 whitespace-nowrap ${
                   isSelected
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-sm'
                     : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
                 }`}
               >
                 {tab.icon}
-                <span>{tab.label}</span>
+                <span className="whitespace-nowrap">{tab.label}</span>
               </button>
             );
           })}
@@ -92,17 +92,17 @@ export default function AdvancedFilterBar({
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition shrink-0 whitespace-nowrap ${
               hasActiveFilters || showAdvanced
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                 : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
             }`}
             title="Lọc theo nhóm cơ và giá máy"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Bộ Lọc Nâng Cao</span>
+            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">Bộ Lọc Nâng Cao</span>
             {hasActiveFilters && (
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
             )}
           </button>
         </div>

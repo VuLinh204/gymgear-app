@@ -183,26 +183,26 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
         ) : (
           <div className="space-y-3 text-xs">
             {topUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between">
-                <Link href={`/user/${user.id}`} className="flex items-center space-x-2 group">
+              <div key={user.id} className="flex items-center justify-between gap-2.5">
+                <Link href={`/user/${user.id}`} className="flex items-center space-x-2 group min-w-0 flex-1 overflow-hidden">
                   <img
                     src={user.avatar}
                     alt={user.name}
-                    className="w-8 h-8 rounded-full object-cover border border-amber-500/40 group-hover:border-amber-400 transition-colors"
+                    className="w-8 h-8 rounded-full object-cover border border-amber-500/40 group-hover:border-amber-400 transition-colors shrink-0"
                   />
-                  <div>
-                    <span className="font-bold text-white block group-hover:text-amber-400 transition-colors">{user.name}</span>
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {user.followersCount} người theo dõi
-                      {user.roleTitle && <> · {user.roleTitle}</>}
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-white block group-hover:text-amber-400 transition-colors truncate">{user.name}</span>
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 truncate">
+                      <Users className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{user.followersCount} người theo dõi</span>
+                      {user.roleTitle && <span className="truncate"> · {user.roleTitle}</span>}
                     </span>
                   </div>
                 </Link>
                 <button
                   onClick={() => handleFollow(user.id)}
                   disabled={followLoading === user.id}
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                  className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
                     followingIds.has(user.id)
                       ? 'text-slate-300 bg-slate-700 border-slate-600 hover:bg-slate-600'
                       : 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30'

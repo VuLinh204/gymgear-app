@@ -40,7 +40,7 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
   const getRoleBadge = () => {
     if (isPremium) {
       return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+        <span className="notranslate inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40" translate="no">
           <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
           <span>VIP PREMIUM</span>
         </span>
@@ -48,7 +48,7 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
     }
     if (isAdmin) {
       return (
-        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40">
+        <span className="notranslate inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40" translate="no">
           <ShieldCheck className="w-3 h-3 text-red-400" />
           <span>ADMINISTRATOR</span>
         </span>
@@ -105,21 +105,21 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
               <img
                 src={currentUser.avatar}
                 alt={currentUser.name}
-                className={`w-12 h-12 rounded-full object-cover border-2 ${
+                className={`w-12 h-12 rounded-full object-cover border-2 shrink-0 ${
                   isPremium ? 'border-amber-400' : isAdmin ? 'border-red-500' : 'border-slate-700'
                 }`}
               />
-              <div>
-                <h4 className="text-sm font-bold text-[var(--foreground)] leading-tight">
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-bold text-[var(--foreground)] leading-tight truncate">
                   {currentUser.name}
                 </h4>
                 <div className="mt-1">{getRoleBadge()}</div>
               </div>
             </div>
 
-                <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-slate-800 text-center text-xs">
-              <div>
-                <span className="font-bold text-[var(--foreground)] block">{currentUser.email || 'Thành viên'}</span>
+            <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-slate-800 text-center text-xs">
+              <div className="min-w-0 overflow-hidden">
+                <span className="notranslate font-bold text-[var(--foreground)] block truncate" translate="no">{currentUser.email || 'Thành viên'}</span>
                 <span className="text-[10px] text-[var(--foreground-dim)]">Tài khoản</span>
               </div>
               <div>
