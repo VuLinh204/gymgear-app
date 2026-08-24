@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchEquipments, getTopUsersByFollowers, toggleFollowUser, isFollowingUser, TopUser } from '@/lib/supabaseDB';
 import { Equipment } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { Flame, Star, Award, CalendarCheck, Sparkles, UserCheck, Users } from 'lucide-react';
+import { Flame, Star, Award, CalendarCheck, Sparkles, UserCheck, Users, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 
 interface SocialSidebarRightProps {
@@ -202,15 +202,26 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
                 <button
                   onClick={() => handleFollow(user.id)}
                   disabled={followLoading === user.id}
-                  className={`shrink-0 whitespace-nowrap px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                  className={`shrink-0 whitespace-nowrap p-1.5 sm:px-2.5 sm:py-1 text-[11px] font-bold rounded-lg border transition-all flex items-center justify-center gap-1 ${
                     followingIds.has(user.id)
-                      ? 'text-slate-300 bg-slate-700 border-slate-600 hover:bg-slate-600'
+                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30'
                       : 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30'
                   } ${followLoading === user.id ? 'opacity-60 cursor-wait' : ''}`}
+                  title={followingIds.has(user.id) ? 'Đang theo dõi (Click để hủy)' : 'Theo dõi người này'}
                 >
-                  {followLoading === user.id ? '...' : followingIds.has(user.id) ? (
-                    <span className="flex items-center gap-1"><UserCheck className="w-3 h-3" /> Đang theo</span>
-                  ) : 'Theo dõi'}
+                  {followLoading === user.id ? (
+                    <span className="text-[10px]">...</span>
+                  ) : followingIds.has(user.id) ? (
+                    <>
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="hidden xl:inline">Đang theo</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Theo dõi</span>
+                    </>
+                  )}
                 </button>
               </div>
             ))}

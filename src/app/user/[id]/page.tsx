@@ -248,18 +248,19 @@ export default function UserProfilePage() {
                     <button
                       onClick={handleFollow}
                       disabled={followLoading}
-                      className={`px-5 py-2 rounded-xl font-bold text-xs transition shadow-md flex items-center gap-1.5 ${
+                      className={`px-4 py-2 rounded-xl font-bold text-xs transition shadow-md flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                         isFollowing 
-                          ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700' 
+                          ? 'bg-slate-800 text-emerald-400 hover:bg-rose-500/10 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30' 
                           : 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 hover:from-amber-400 hover:to-orange-400'
                       }`}
+                      title={isFollowing ? 'Đang theo dõi (Click để hủy)' : 'Theo dõi'}
                     >
                       {followLoading ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : isFollowing ? (
                         <>
                           <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Đang Theo Dõi</span>
+                          <span className="hidden sm:inline">Đang Theo Dõi</span>
                         </>
                       ) : (
                         <>

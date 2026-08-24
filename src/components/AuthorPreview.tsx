@@ -221,11 +221,12 @@ export const AuthorPreview: React.FC<Props> = ({
               <button 
                 onClick={handleFollow}
                 disabled={isFollowSubmitting}
-                className={`w-[124px] h-[32px] rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1 shrink-0 ${
+                className={`px-3 py-1.5 h-[32px] rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap ${
                   following 
-                    ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700' 
+                    ? 'bg-slate-800 text-emerald-400 hover:bg-rose-500/10 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30' 
                     : 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 hover:from-amber-400 hover:to-orange-400'
                 }`}
+                title={following ? 'Đang theo dõi (Click để hủy)' : 'Theo dõi'}
               >
                 {isFollowSubmitting ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
