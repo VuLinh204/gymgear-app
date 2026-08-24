@@ -204,8 +204,8 @@ function AppLayout() {
       <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
-          {/* Left sidebar — sticks at top, reveals bottom content as page scrolls to end of feed */}
-          <div className="hidden lg:block lg:col-span-2 xl:col-span-3 self-stretch">
+          {/* Left sidebar — lg: col-4, xl: col-3 */}
+          <div className="hidden lg:block lg:col-span-4 xl:col-span-3 self-stretch">
             <div className="sticky top-20">
               <SocialSidebarLeft
                 activeCategory={activeCategory}
@@ -218,8 +218,8 @@ function AppLayout() {
             </div>
           </div>
 
-          {/* Center feed */}
-          <div className="lg:col-span-8 xl:col-span-6 space-y-5">
+          {/* Center feed — lg: col-8, xl: col-6 */}
+          <div className="col-span-1 lg:col-span-8 xl:col-span-6 space-y-5 min-w-0 max-w-3xl mx-auto w-full">
 
             {/* Stories strip */}
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 overflow-hidden">
@@ -317,7 +317,7 @@ function AppLayout() {
             )}
           </div>
 
-          {/* Right sidebar — sticky with own scroll */}
+          {/* Right sidebar — xl only: col-3, sticky with own scroll */}
           <div className="hidden xl:block xl:col-span-3 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden sidebar-scroll">
             <SocialSidebarRight
               onViewEquipment={setSelectedEquipment}

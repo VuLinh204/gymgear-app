@@ -66,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* ── Search (Spotlight Trigger) ─────────────────────────────────── */}
-          <div className="hidden md:flex flex-1 max-w-md">
+          <div className="hidden md:flex flex-1 max-w-[220px] lg:max-w-xs xl:max-w-md min-w-0">
             <div 
               onClick={onOpenSpotlight}
               className="relative w-full cursor-pointer group"
@@ -75,10 +75,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <input
                 type="text"
                 readOnly
-                placeholder="Tìm máy tập, bài review, PT..."
-                className="w-full bg-slate-900 text-slate-200 placeholder-slate-400 text-xs sm:text-sm rounded-xl pl-10 pr-16 py-2 border border-slate-800 group-hover:border-amber-500/50 cursor-pointer transition"
+                placeholder="Tìm máy tập, bài review..."
+                className="w-full bg-slate-900 text-slate-200 placeholder-slate-400 text-xs sm:text-sm rounded-xl pl-9 pr-14 py-2 border border-slate-800 group-hover:border-amber-500/50 cursor-pointer transition truncate"
               />
-              <div className="notranslate absolute right-2.5 top-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-400 font-mono" translate="no">
+              <div className="notranslate absolute right-2 top-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-400 font-mono" translate="no">
                 <span>Ctrl</span>
                 <span>K</span>
               </div>
@@ -110,11 +110,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Nút Đổi Ngôn Ngữ Tự Động Toàn Trang (Google Translate VI / EN) */}
             <GoogleTranslator />
 
-            {/* Nút Bảng Hướng Dẫn & Phím Tắt */}
+            {/* Nút Bảng Hướng Dẫn & Phím Tắt (Hiện từ màn hình lg) */}
             {onOpenGuide && (
               <button
                 onClick={onOpenGuide}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition"
+                className="hidden lg:flex p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition cursor-pointer"
                 title="Hướng dẫn tính năng & Phím tắt (Nhấn ? hoặc Ctrl + /)"
                 aria-label="Hướng dẫn"
               >
@@ -128,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition"
+              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition cursor-pointer"
               aria-label="Toggle theme"
             >
               {isLight ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
@@ -137,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Book button (luôn hiển thị) */}
             <button
               onClick={onOpenBooking}
-              className="inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 text-xs font-bold text-slate-950 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 transition font-bold"
+              className="inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 text-xs font-bold text-slate-950 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 transition cursor-pointer shrink-0"
             >
               <CalendarCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Đặt Lịch</span>
@@ -146,38 +146,38 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Auth section */}
             {isGuest ? (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => requestAuth('login')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 hover:bg-slate-800 transition"
+                  className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 hover:bg-slate-800 transition cursor-pointer"
                 >
-                  <LogIn className="w-3.5 h-3.5 text-amber-400" /> Đăng Nhập
+                  <LogIn className="w-3.5 h-3.5 text-amber-400" /> <span className="hidden lg:inline">Đăng Nhập</span>
                 </button>
                 <button
                   onClick={() => requestAuth('register')}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-md shadow-orange-500/20 transition"
+                  className="flex items-center gap-1.5 px-3 lg:px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-md shadow-orange-500/20 transition cursor-pointer"
                 >
-                  <UserPlus className="w-3.5 h-3.5" /> Đăng Ký
+                  <UserPlus className="w-3.5 h-3.5" /> <span className="hidden lg:inline">Đăng Ký</span>
                 </button>
               </div>
             ) : (
               /* User dropdown menu */
-              <div className="relative">
+              <div className="relative shrink-0">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 p-1 pr-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 transition"
+                  className="flex items-center gap-1.5 lg:gap-2 p-1 pr-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 transition cursor-pointer"
                 >
                   <img
                     src={currentUser.avatar}
                     alt={currentUser.name}
-                    className={`w-8 h-8 rounded-full object-cover border-2 ${
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 shrink-0 ${
                       currentUser.role === 'premium' ? 'border-amber-400' :
                       currentUser.role === 'admin' ? 'border-red-500' : 'border-slate-600'
                     }`}
                   />
-                  <div className="text-left hidden lg:block">
-                    <p className="text-xs font-bold text-[var(--foreground)] leading-none">{currentUser.name}</p>
-                    <p className="text-[10px] text-[var(--foreground-dim)] leading-none mt-0.5">{currentUser.role.toUpperCase()}</p>
+                  <div className="text-left hidden xl:block min-w-0 max-w-[100px]">
+                    <p className="text-xs font-bold text-[var(--foreground)] leading-none truncate">{currentUser.name}</p>
+                    <p className="text-[10px] text-[var(--foreground-dim)] leading-none mt-0.5 truncate">{currentUser.role.toUpperCase()}</p>
                   </div>
                   <ChevronDown className={`w-3 h-3 text-[var(--foreground-dim)] transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -185,8 +185,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-800 bg-slate-950">
-                      <p className="text-xs font-bold text-[var(--foreground)]">{currentUser.name}</p>
-                      <p className="text-[10px] text-[var(--foreground-dim)] mt-0.5">{currentUser.email || currentUser.roleTitle}</p>
+                      <p className="text-xs font-bold text-[var(--foreground)] truncate">{currentUser.name}</p>
+                      <p className="text-[10px] text-[var(--foreground-dim)] mt-0.5 truncate">{currentUser.email || currentUser.roleTitle}</p>
                     </div>
                     
                     <div className="py-1 border-b border-slate-800">
@@ -208,7 +208,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     <button
                       onClick={() => { logout(); setUserMenuOpen(false); }}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Đăng Xuất
                     </button>
@@ -222,8 +222,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="md:hidden flex items-center gap-2">
             <GoogleTranslator />
             <button
+              onClick={onOpenBooking}
+              className="p-2 text-amber-400 rounded-lg bg-amber-500/10 border border-amber-500/30"
+              title="Đặt Lịch Thử Máy"
+            >
+              <CalendarCheck className="w-4 h-4" />
+            </button>
+            <button
               className="p-2 text-slate-300 hover:text-white rounded-lg bg-slate-900 border border-slate-800"
               onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Menu"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -232,7 +240,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* ── Mobile dropdown ───────────────────────────────────────────────── */}
         {mobileOpen && (
-          <div className="md:hidden py-4 border-t border-slate-800 space-y-3 text-xs">
+          <div className="md:hidden py-4 border-t border-slate-800 space-y-3 text-xs animate-in fade-in duration-150">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
               <input
@@ -244,8 +252,29 @@ export const Navbar: React.FC<NavbarProps> = ({
               />
             </div>
 
+            <div className="flex items-center justify-between py-1 border-b border-slate-800/80">
+              <span className="text-slate-400">Giao diện (Sáng / Tối):</span>
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 text-xs"
+              >
+                {isLight ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5" />}
+                <span>{isLight ? 'Chế độ Sáng' : 'Chế độ Tối'}</span>
+              </button>
+            </div>
+
+            {onOpenGuide && (
+              <button
+                onClick={() => { setMobileOpen(false); onOpenGuide(); }}
+                className="w-full flex items-center justify-between py-2 text-slate-300 hover:text-amber-400 border-b border-slate-800/80"
+              >
+                <span className="flex items-center gap-2"><HelpCircle className="w-4 h-4 text-amber-400" /> Hướng dẫn & Phím tắt</span>
+                <span className="text-[10px] text-slate-500 font-mono">?</span>
+              </button>
+            )}
+
             {isGuest ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pt-1">
                 <button
                   onClick={() => { setMobileOpen(false); requestAuth('login'); }}
                   className="py-2 font-bold text-amber-400 bg-amber-500/10 rounded-xl border border-amber-500/30"
@@ -260,20 +289,39 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover border-2 border-amber-500" alt="" />
-                  <div>
-                    <p className="font-bold text-[var(--foreground)]">{currentUser.name}</p>
-                    <p className="text-[10px] text-[var(--foreground-dim)]">{currentUser.roleTitle}</p>
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <img src={currentUser.avatar} className="w-8 h-8 rounded-full object-cover border-2 border-amber-500 shrink-0" alt="" />
+                    <div className="min-w-0">
+                      <p className="font-bold text-[var(--foreground)] truncate">{currentUser.name}</p>
+                      <p className="text-[10px] text-[var(--foreground-dim)] truncate">{currentUser.roleTitle}</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => { setMobileOpen(false); logout(); }}
+                    className="flex items-center gap-1 px-3 py-1.5 font-bold text-rose-400 bg-rose-500/10 rounded-xl border border-rose-500/30 shrink-0"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Đăng Xuất
+                  </button>
                 </div>
-                <button
-                  onClick={() => { setMobileOpen(false); logout(); }}
-                  className="flex items-center gap-1 px-3 py-1.5 font-bold text-rose-400 bg-rose-500/10 rounded-xl border border-rose-500/30"
-                >
-                  <LogOut className="w-3.5 h-3.5" /> Đăng Xuất
-                </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-semibold"
+                  >
+                    <User className="w-3.5 h-3.5" /> Trang cá nhân
+                  </Link>
+                  <Link
+                    href="/settings"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-semibold"
+                  >
+                    <Settings className="w-3.5 h-3.5" /> Cài đặt
+                  </Link>
+                </div>
               </div>
             )}
           </div>
