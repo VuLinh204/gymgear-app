@@ -23,8 +23,8 @@ export default function UserProfilePage() {
   const { currentUser, requestAuth } = useAuth();
 
   const [profileUser, setProfileUser] = useState<UserAuthor | null>(null);
-  const [followersCount, setFollowersCount] = useState<number>(45);
-  const [followingCount, setFollowingCount] = useState<number>(20);
+  const [followersCount, setFollowersCount] = useState<number>(0);
+  const [followingCount, setFollowingCount] = useState<number>(0);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -64,12 +64,8 @@ export default function UserProfilePage() {
         getFollowingCountByUserId(id),
       ]);
 
-      if (typeof count === 'number' && count > 0) {
-        setFollowersCount(count);
-      }
-      if (typeof fgCount === 'number' && fgCount > 0) {
-        setFollowingCount(fgCount);
-      }
+      if (typeof count === 'number') setFollowersCount(count);
+      if (typeof fgCount === 'number') setFollowingCount(fgCount);
       setIsFollowing(!!following);
 
       if (!user) {
@@ -307,6 +303,10 @@ export default function UserProfilePage() {
         userId={id}
         userName={profileUser?.name}
         initialTab={followModalTab}
+        onCountsLoaded={(fc, fg) => {
+          setFollowersCount(fc);
+          setFollowingCount(fg);
+        }}
       />
 
       <AuthModal />

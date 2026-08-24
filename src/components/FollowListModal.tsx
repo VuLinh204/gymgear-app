@@ -20,7 +20,9 @@ import {
   fetchUserFollowers, 
   fetchUserFollowing, 
   toggleFollowUser, 
-  isFollowingUser 
+  isFollowingUser,
+  getFollowersCountByUserId,
+  getFollowingCountByUserId
 } from '@/lib/supabaseDB';
 import Link from 'next/link';
 
@@ -30,6 +32,7 @@ interface FollowListModalProps {
   userId: string;
   userName?: string;
   initialTab?: 'followers' | 'following';
+  onCountsLoaded?: (followersCount: number, followingCount: number) => void;
 }
 
 export default function FollowListModal({
@@ -38,6 +41,7 @@ export default function FollowListModal({
   userId,
   userName = 'Người dùng',
   initialTab = 'followers',
+  onCountsLoaded,
 }: FollowListModalProps) {
   const { currentUser, requestAuth } = useAuth();
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>(initialTab);
@@ -46,6 +50,8 @@ export default function FollowListModal({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
+
+
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -56,26 +62,45 @@ export default function FollowListModal({
 
     const loadData = async () => {
       setLoading(true);
-      const [followersList, followingList] = await Promise.all([
+      const [followersList, followingList, dbFollowersCount, dbFollowingCount] = await Promise.all([
         fetchUserFollowers(userId),
         fetchUserFollowing(userId),
+        getFollowersCountByUserId(userId),
+        getFollowingCountByUserId(userId),
       ]);
 
       setFollowers(followersList);
       setFollowing(followingList);
 
-      // Pre-check following state for all users in the lists
-      const allIds = Array.from(new Set([...followersList.map(u => u.id), ...followingList.map(u => u.id)]));
+      // Khởi tạo map trạng thái follow
       const fMap: Record<string, boolean> = {};
-      
-      allIds.forEach(id => {
+
+      // Tất cả người trong "đang theo dõi" → chắc chắn đã follow rồi
+      followingList.forEach(u => {
+        fMap[u.id] = true;
+        try { localStorage.setItem(`gymgear_follow_${u.id}`, 'true'); } catch (_) {}
+      });
+
+      // Với danh sách "người theo dõi": đọc từ localStorage
+      followersList.forEach(u => {
+        if (fMap[u.id] !== undefined) return;
         try {
-          const cached = localStorage.getItem(`gymgear_follow_${id}`);
-          if (cached !== null) fMap[id] = cached === 'true';
-        } catch (_) {}
+          const cached = localStorage.getItem(`gymgear_follow_${u.id}`);
+          fMap[u.id] = cached === 'true';
+        } catch (_) {
+          fMap[u.id] = false;
+        }
       });
 
       setFollowingMap(fMap);
+
+      // Dùng count từ DB (đáng tin hơn list.length vì list có thể bị lỗi join)
+      if (onCountsLoaded) {
+        onCountsLoaded(
+          Math.max(followersList.length, dbFollowersCount || 0),
+          Math.max(followingList.length, dbFollowingCount || 0),
+        );
+      }
       setLoading(false);
     };
 

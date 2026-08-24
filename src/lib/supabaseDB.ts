@@ -804,25 +804,29 @@ export async function toggleFollowUser(targetUserId: string, followerUserId?: st
 export async function fetchUserFollowers(userId: string): Promise<UserAuthor[]> {
   try {
     const targetAuth = await getAuthIdByUserId(userId);
-    if (!targetAuth) return getFallbackFollowers();
+    if (!targetAuth) return [];
 
+    // Lấy tất cả auth_id của người theo dõi
     const { data: followRows, error } = await supabase
       .from('follows')
       .select('follower_auth')
       .eq('following_auth', targetAuth);
 
-    if (error || !followRows || followRows.length === 0) {
-      return getFallbackFollowers();
-    }
+    if (error) { console.error('fetchUserFollowers follows error:', error); return []; }
+    if (!followRows || followRows.length === 0) return [];
 
     const followerAuthIds = followRows.map((r: any) => r.follower_auth);
+
+    // Tìm users theo auth_id
     const { data: users, error: uErr } = await supabase
       .from('users')
-      .select('id, name, avatar, role, role_title, is_verified, gym_branch')
+      .select('id, name, avatar, role, role_title, is_verified, auth_id')
       .in('auth_id', followerAuthIds);
 
-    if (uErr || !users || users.length === 0) {
-      return getFallbackFollowers();
+    if (uErr) { console.error('fetchUserFollowers users error:', uErr); return []; }
+    if (!users || users.length === 0) {
+      console.warn('fetchUserFollowers: found follows but no matching users. authIds:', followerAuthIds);
+      return [];
     }
 
     return users.map((u: any) => ({
@@ -832,35 +836,40 @@ export async function fetchUserFollowers(userId: string): Promise<UserAuthor[]> 
       role: u.role || 'user',
       roleTitle: u.role_title || 'Thành viên Gymer',
       isVerified: !!u.is_verified,
-      gymBranch: u.gym_branch || 'Showroom Hà Nội',
+      gymBranch: 'Showroom GymGear',
     }));
-  } catch (_) {
-    return getFallbackFollowers();
+  } catch (e) {
+    console.error('fetchUserFollowers exception:', e);
+    return [];
   }
 }
 
 export async function fetchUserFollowing(userId: string): Promise<UserAuthor[]> {
   try {
     const followerAuth = await getAuthIdByUserId(userId);
-    if (!followerAuth) return getFallbackFollowing();
+    if (!followerAuth) return [];
 
+    // Lấy tất cả auth_id của người đang được theo dõi
     const { data: followRows, error } = await supabase
       .from('follows')
       .select('following_auth')
       .eq('follower_auth', followerAuth);
 
-    if (error || !followRows || followRows.length === 0) {
-      return getFallbackFollowing();
-    }
+    if (error) { console.error('fetchUserFollowing follows error:', error); return []; }
+    if (!followRows || followRows.length === 0) return [];
 
     const followingAuthIds = followRows.map((r: any) => r.following_auth);
+
+    // Tìm users theo auth_id
     const { data: users, error: uErr } = await supabase
       .from('users')
-      .select('id, name, avatar, role, role_title, is_verified, gym_branch')
+      .select('id, name, avatar, role, role_title, is_verified, auth_id')
       .in('auth_id', followingAuthIds);
 
-    if (uErr || !users || users.length === 0) {
-      return getFallbackFollowing();
+    if (uErr) { console.error('fetchUserFollowing users error:', uErr); return []; }
+    if (!users || users.length === 0) {
+      console.warn('fetchUserFollowing: found follows but no matching users. authIds:', followingAuthIds);
+      return [];
     }
 
     return users.map((u: any) => ({
@@ -870,10 +879,11 @@ export async function fetchUserFollowing(userId: string): Promise<UserAuthor[]> 
       role: u.role || 'user',
       roleTitle: u.role_title || 'Thành viên Gymer',
       isVerified: !!u.is_verified,
-      gymBranch: u.gym_branch || 'Showroom TP.HCM',
+      gymBranch: 'Showroom GymGear',
     }));
-  } catch (_) {
-    return getFallbackFollowing();
+  } catch (e) {
+    console.error('fetchUserFollowing exception:', e);
+    return [];
   }
 }
 

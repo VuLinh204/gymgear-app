@@ -52,8 +52,8 @@ function ProfileContent() {
   const [deletedPosts, setDeletedPosts] = useState<SocialPost[]>([]);
   const [savedPosts, setSavedPosts] = useState<SocialPost[]>([]);
   const [userPRs, setUserPRs] = useState<UserPRRecord[]>([]);
-  const [followersCount, setFollowersCount] = useState<number>(38);
-  const [followingCount, setFollowingCount] = useState<number>(24);
+  const [followersCount, setFollowersCount] = useState<number>(0);
+  const [followingCount, setFollowingCount] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'my-posts' | 'prs' | 'saved' | 'trash'>('my-posts');
   const [loading, setLoading] = useState(true);
 
@@ -92,12 +92,8 @@ function ProfileContent() {
         setDeletedPosts(trashData);
         setSavedPosts(savedData);
         setUserPRs(prData);
-        if (typeof fCount === 'number' && fCount > 0) {
-          setFollowersCount(fCount);
-        }
-        if (typeof fgCount === 'number' && fgCount > 0) {
-          setFollowingCount(fgCount);
-        }
+        if (typeof fCount === 'number') setFollowersCount(fCount);
+        if (typeof fgCount === 'number') setFollowingCount(fgCount);
         setLoading(false);
       };
       loadData();
@@ -521,6 +517,10 @@ function ProfileContent() {
         userId={currentUser.id}
         userName={currentUser.name}
         initialTab={followModalTab}
+        onCountsLoaded={(fc, fg) => {
+          setFollowersCount(fc);
+          setFollowingCount(fg);
+        }}
       />
 
       <AuthModal />
