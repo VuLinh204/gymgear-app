@@ -201,11 +201,11 @@ function AppLayout() {
       />
 
       {/* 3-column feed layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
           {/* Left sidebar */}
-          <div className="hidden lg:block lg:col-span-3 sticky top-24">
+          <div className="hidden lg:block lg:col-span-2 xl:col-span-3 sticky top-24">
             <SocialSidebarLeft
               activeCategory={activeCategory}
               onSelectCategory={setActiveCategory}
@@ -217,7 +217,7 @@ function AppLayout() {
           </div>
 
           {/* Center feed */}
-          <div className="lg:col-span-6 space-y-5">
+          <div className="lg:col-span-8 xl:col-span-6 space-y-5">
 
             {/* Stories strip */}
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 overflow-hidden">
@@ -316,7 +316,7 @@ function AppLayout() {
           </div>
 
           {/* Right sidebar */}
-          <div className="hidden lg:block lg:col-span-3 sticky top-24">
+          <div className="hidden xl:block xl:col-span-3 sticky top-24">
             <SocialSidebarRight
               onViewEquipment={setSelectedEquipment}
               onOpenBooking={handleOpenBooking}
