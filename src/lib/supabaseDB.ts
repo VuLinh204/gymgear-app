@@ -156,7 +156,7 @@ export async function toggleLike(postId: string, userId: string): Promise<{ like
   return { liked: !existing, newCount: count || 0 };
 }
 
-// ── LẤY COMMENTS THEO POST ───────────────────────────────────────────────────
+// ── LẤY COMMENTS THEO POST (Hỗ trợ lồng nhau dạng TikTok/Facebook) ───────────
 export async function fetchCommentsByPost(postId: string): Promise<PostComment[]> {
   const { data, error } = await supabase
     .from('comments')
@@ -169,13 +169,27 @@ export async function fetchCommentsByPost(postId: string): Promise<PostComment[]
     return [];
   }
 
-  return (data || []).map((c: any) => ({
+  // Đọc danh sách like comment từ cache
+  const likedCommentIds = new Set<string>();
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('gymgear_comment_likes');
+      if (stored) JSON.parse(stored).forEach((id: string) => likedCommentIds.add(id));
+    } catch (_) {}
+  }
+
+  // 1. Chuyển đổi toàn bộ raw comments
+  const rawList: PostComment[] = (data || []).map((c: any) => ({
     id: c.id,
     content: c.content,
     createdAt: new Date(c.created_at).toLocaleString('vi-VN', {
       hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
     }),
-    likesCount: 0,
+    likesCount: c.likes_count || (likedCommentIds.has(c.id) ? 1 : 0),
+    isLiked: likedCommentIds.has(c.id),
+    parentId: c.parent_id || null,
+    replyToUser: c.reply_to_user || null,
+    replies: [],
     author: {
       id: c.author?.id || '',
       name: c.author?.name || 'Ẩn danh',
@@ -185,40 +199,112 @@ export async function fetchCommentsByPost(postId: string): Promise<PostComment[]
       isVerified: c.author?.is_verified,
     }
   }));
+
+  // 2. Gom nhóm theo cấu trúc cây (Root comments chứa replies)
+  const commentMap = new Map<string, PostComment>();
+  const rootComments: PostComment[] = [];
+
+  rawList.forEach(c => {
+    commentMap.set(c.id, { ...c, replies: [] });
+  });
+
+  rawList.forEach(c => {
+    const item = commentMap.get(c.id)!;
+    if (c.parentId && commentMap.has(c.parentId)) {
+      const parent = commentMap.get(c.parentId)!;
+      parent.replies = parent.replies || [];
+      parent.replies.push(item);
+    } else {
+      rootComments.push(item);
+    }
+  });
+
+  return rootComments;
 }
 
-// ── THÊM COMMENT ─────────────────────────────────────────────────────────────
-export async function addComment(postId: string, userId: string, content: string): Promise<PostComment | null> {
-  // Lấy auth UID để lưu vào cột auth_id (dùng cho RLS)
+// ── THÊM COMMENT (Hỗ trợ trả lời lồng nhau) ───────────────────────────────────
+export async function addComment(
+  postId: string, 
+  userId: string, 
+  content: string,
+  parentId?: string | null,
+  replyToUser?: string | null
+): Promise<PostComment | null> {
   const { data: { session } } = await supabase.auth.getSession();
   const authId = session?.user?.id;
   if (!authId) return null;
 
-  const { data, error } = await supabase
-    .from('comments')
-    .insert({ post_id: postId, user_id: userId, author_id: authId, content })
-    .select('*, author:users(*)')
-    .single();
+  let insertedData: any = null;
 
-  if (error) {
-    console.error("Error adding comment:", error);
-    return null;
+  // Thử insert có kèm parent_id & reply_to_user
+  try {
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({ 
+        post_id: postId, 
+        user_id: userId, 
+        author_id: authId, 
+        content,
+        parent_id: parentId || null,
+        reply_to_user: replyToUser || null
+      })
+      .select('*, author:users(*)')
+      .single();
+
+    if (!error && data) {
+      insertedData = data;
+    }
+  } catch (_) {}
+
+  // Fallback nếu cột parent_id chưa có trong Supabase
+  if (!insertedData) {
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({ post_id: postId, user_id: userId, author_id: authId, content })
+      .select('*, author:users(*)')
+      .single();
+
+    if (error) {
+      console.error("Error adding comment:", error);
+      return null;
+    }
+    insertedData = data;
   }
 
   return {
-    id: data.id,
-    content: data.content,
+    id: insertedData.id,
+    content: insertedData.content,
     createdAt: 'Vừa xong',
     likesCount: 0,
+    isLiked: false,
+    parentId: parentId || insertedData.parent_id || null,
+    replyToUser: replyToUser || insertedData.reply_to_user || null,
+    replies: [],
     author: {
-      id: data.author?.id || '',
-      name: data.author?.name || 'Ẩn danh',
-      avatar: data.author?.avatar || '/default-avatar.svg',
-      role: data.author?.role || 'user',
-      roleTitle: data.author?.role_title,
-      isVerified: data.author?.is_verified,
+      id: insertedData.author?.id || '',
+      name: insertedData.author?.name || session?.user?.user_metadata?.name || 'Bạn',
+      avatar: insertedData.author?.avatar || '/default-avatar.svg',
+      role: insertedData.author?.role || 'user',
+      roleTitle: insertedData.author?.role_title,
+      isVerified: insertedData.author?.is_verified,
     }
   };
+}
+
+// ── LIKE COMMENT ─────────────────────────────────────────────────────────────
+export function toggleCommentLike(commentId: string): { liked: boolean } {
+  if (typeof window === 'undefined') return { liked: false };
+  try {
+    const stored = localStorage.getItem('gymgear_comment_likes');
+    const set = new Set<string>(stored ? JSON.parse(stored) : []);
+    const wasLiked = set.has(commentId);
+    if (wasLiked) set.delete(commentId);
+    else set.add(commentId);
+    localStorage.setItem('gymgear_comment_likes', JSON.stringify(Array.from(set)));
+    return { liked: !wasLiked };
+  } catch (_) {
+    return { liked: false };
+  }
 }
 
 // ── LẤY BOOKINGS (Admin) ────────────────────────────────────────────────────

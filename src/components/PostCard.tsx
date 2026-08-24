@@ -5,9 +5,10 @@ import { useAuth } from '@/context/AuthContext';
 import { SocialPost, Equipment, PostComment } from '@/types';
 import {
   Star, Heart, MessageSquare, Share2, Bookmark,
-  CalendarCheck, Crown, ShieldCheck, UserCheck, Send, LogIn, Loader2, Pin, Trash2, Pencil, RotateCcw, X
+  CalendarCheck, Crown, ShieldCheck, UserCheck, Send, LogIn, Loader2, Pin, Trash2, Pencil, RotateCcw, X,
+  CornerDownRight, ChevronDown, ChevronUp, Reply
 } from 'lucide-react';
-import { toggleLike, addComment, fetchCommentsByPost, deletePost, hardDeletePost, restorePost, toggleBookmark } from '@/lib/supabaseDB';
+import { toggleLike, addComment, fetchCommentsByPost, deletePost, hardDeletePost, restorePost, toggleBookmark, toggleCommentLike } from '@/lib/supabaseDB';
 import Link from 'next/link';
 import AuthorPreview from './AuthorPreview';
 
@@ -41,7 +42,7 @@ const RoleBadge = ({ role }: { role: string }) => {
   );
 };
 
-// ── Comment Modal (Facebook-style popup) ──────────────────────────────────────
+// ── Comment Modal (TikTok & Facebook-style nested comments popup) ───────────
 interface CommentModalProps {
   post: SocialPost;
   commentList: PostComment[];
@@ -55,7 +56,7 @@ interface CommentModalProps {
   onClose: () => void;
   onLike: () => void;
   onCommentChange: (v: string) => void;
-  onCommentSubmit: (e: React.FormEvent) => void;
+  onCommentSubmit: (e: React.FormEvent, parentId?: string | null, replyToUser?: string | null) => void;
   currentUserAvatar?: string;
   currentUserName?: string;
   isGuest: boolean;
@@ -70,6 +71,15 @@ const CommentModal: React.FC<CommentModalProps> = ({
   currentUserAvatar, currentUserName, isGuest, requestAuth, onViewEquipment, onBookEquipment
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [replyingTo, setReplyingTo] = useState<{
+    commentId: string;
+    authorName: string;
+    rootCommentId: string;
+  } | null>(null);
+
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [likedComments, setLikedComments] = useState<Record<string, boolean>>({});
+  const [commentLikeCounts, setCommentLikeCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     // Focus input on open
@@ -78,6 +88,50 @@ const CommentModal: React.FC<CommentModalProps> = ({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  const toggleReplies = (rootId: string) => {
+    setExpandedReplies((prev) => {
+      const next = new Set(prev);
+      if (next.has(rootId)) next.delete(rootId);
+      else next.add(rootId);
+      return next;
+    });
+  };
+
+  const handleStartReply = (commentId: string, authorName: string, rootCommentId: string) => {
+    if (isGuest) {
+      requestAuth('login');
+      return;
+    }
+    setReplyingTo({ commentId, authorName, rootCommentId });
+    // Tự động mở rộng nhánh câu trả lời
+    setExpandedReplies((prev) => new Set(prev).add(rootCommentId));
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  const handleToggleLikeComment = (cId: string, initialCount: number, initialLiked?: boolean) => {
+    if (isGuest) {
+      requestAuth('login');
+      return;
+    }
+    const currentStatus = likedComments[cId] !== undefined ? likedComments[cId] : !!initialLiked;
+    const currentCount = commentLikeCounts[cId] !== undefined ? commentLikeCounts[cId] : initialCount;
+    const nextStatus = !currentStatus;
+
+    setLikedComments((prev) => ({ ...prev, [cId]: nextStatus }));
+    setCommentLikeCounts((prev) => ({ ...prev, [cId]: Math.max(0, currentCount + (nextStatus ? 1 : -1)) }));
+    toggleCommentLike(cId);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onCommentSubmit(e, replyingTo?.rootCommentId, replyingTo?.authorName);
+    setReplyingTo(null);
+  };
 
   return (
     <div
@@ -89,7 +143,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
 
       {/* Modal */}
       <div
-        className="relative bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl"
+        className="relative bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -166,7 +220,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
             <div>{commentsCount} bình luận</div>
           </div>
 
-          {/* Social Action Bar (Like / Comment / Share / Bookmark) */}
+          {/* Social Action Bar (Like / Comment / Share) */}
           <div className="flex items-center justify-between py-2 border-y border-slate-800/80 text-xs text-slate-400">
             <button
               onClick={onLike}
@@ -204,32 +258,164 @@ const CommentModal: React.FC<CommentModalProps> = ({
             </button>
           </div>
 
-          {/* Comments List */}
-          <div className="space-y-3 pt-1">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tất cả bình luận ({commentsCount})</h4>
+          {/* ── Nested Comments List (TikTok / Facebook UI) ─────────────── */}
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Tất cả bình luận ({commentsCount})
+              </h4>
+              <span className="text-[11px] text-slate-500">Phù hợp nhất</span>
+            </div>
+
             {commentsLoading ? (
               <div className="flex items-center justify-center py-8 gap-2 text-xs text-slate-500">
                 <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
                 <span>Đang tải bình luận...</span>
               </div>
             ) : commentList.length > 0 ? (
-              commentList.map((c) => (
-                <div key={c.id} className="flex gap-3">
-                  <Link href={`/user/${c.author.id}`} onClick={onClose}>
-                    <img src={c.author.avatar} className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 cursor-pointer" alt="" />
-                  </Link>
-                  <div className="flex-1 bg-slate-950 rounded-2xl p-3 text-xs space-y-1 border border-slate-800/60">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AuthorPreview userId={c.author.id} onNavigate={onClose} initialName={c.author.name} initialAvatar={c.author.avatar} />
-                        <RoleBadge role={c.author.role} />
+              commentList.map((c) => {
+                const isCommentLiked = likedComments[c.id] !== undefined ? likedComments[c.id] : !!c.isLiked;
+                const commentLikes = commentLikeCounts[c.id] !== undefined ? commentLikeCounts[c.id] : (c.likesCount || 0);
+                const hasReplies = c.replies && c.replies.length > 0;
+                const isExpanded = expandedReplies.has(c.id);
+
+                return (
+                  <div key={c.id} className="space-y-2 group">
+                    {/* Root Comment Item */}
+                    <div className="flex gap-3">
+                      <Link href={`/user/${c.author.id}`} onClick={onClose}>
+                        <img
+                          src={c.author.avatar}
+                          className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 cursor-pointer border border-slate-700 hover:border-amber-400 transition"
+                          alt=""
+                        />
+                      </Link>
+
+                      <div className="flex-1 space-y-1.5">
+                        {/* Bubble */}
+                        <div className="bg-slate-950/90 rounded-2xl p-3 text-xs space-y-1 border border-slate-800/70 inline-block w-full">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <AuthorPreview userId={c.author.id} onNavigate={onClose} initialName={c.author.name} initialAvatar={c.author.avatar} />
+                              <RoleBadge role={c.author.role} />
+                            </div>
+                            <span className="text-[10px] text-slate-500 shrink-0">{c.createdAt}</span>
+                          </div>
+                          <p className="text-slate-200 leading-relaxed break-words">{c.content}</p>
+                        </div>
+
+                        {/* Action buttons (Like & Reply) */}
+                        <div className="flex items-center gap-4 text-[11px] text-slate-400 pl-2">
+                          <button
+                            onClick={() => handleToggleLikeComment(c.id, c.likesCount, c.isLiked)}
+                            className={`flex items-center gap-1 font-semibold transition-colors cursor-pointer ${
+                              isCommentLiked ? 'text-rose-500' : 'hover:text-rose-400'
+                            }`}
+                          >
+                            <Heart className={`w-3 h-3 ${isCommentLiked ? 'fill-rose-500' : ''}`} />
+                            <span>{commentLikes > 0 ? commentLikes : 'Thích'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleStartReply(c.id, c.author.name, c.id)}
+                            className="flex items-center gap-1 font-semibold hover:text-amber-400 transition-colors cursor-pointer"
+                          >
+                            <Reply className="w-3 h-3" />
+                            <span>Trả lời</span>
+                          </button>
+                        </div>
+
+                        {/* Button toggle replies (TikTok / Facebook style) */}
+                        {hasReplies && (
+                          <div className="pt-1 pl-2">
+                            <button
+                              onClick={() => toggleReplies(c.id)}
+                              className="flex items-center gap-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer group/btn"
+                            >
+                              <span className="w-6 h-[1px] bg-amber-500/50 group-hover/btn:w-8 transition-all" />
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                  <span>Ẩn {c.replies!.length} câu trả lời</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                  <span>Xem {c.replies!.length} câu trả lời</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* ── Nested Replies Thread ── */}
+                        {hasReplies && isExpanded && (
+                          <div className="border-l-2 border-slate-800/80 ml-3 pl-3.5 space-y-3 pt-2">
+                            {c.replies!.map((reply) => {
+                              const isReplyLiked = likedComments[reply.id] !== undefined ? likedComments[reply.id] : !!reply.isLiked;
+                              const replyLikes = commentLikeCounts[reply.id] !== undefined ? commentLikeCounts[reply.id] : (reply.likesCount || 0);
+
+                              return (
+                                <div key={reply.id} className="flex gap-2.5">
+                                  <Link href={`/user/${reply.author.id}`} onClick={onClose}>
+                                    <img
+                                      src={reply.author.avatar}
+                                      className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 cursor-pointer border border-slate-700"
+                                      alt=""
+                                    />
+                                  </Link>
+
+                                  <div className="flex-1 space-y-1">
+                                    {/* Reply Bubble */}
+                                    <div className="bg-slate-950/70 rounded-2xl p-2.5 text-xs space-y-1 border border-slate-800/50 inline-block w-full">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-1.5">
+                                          <AuthorPreview userId={reply.author.id} onNavigate={onClose} initialName={reply.author.name} initialAvatar={reply.author.avatar} />
+                                          <RoleBadge role={reply.author.role} />
+                                        </div>
+                                        <span className="text-[10px] text-slate-500 shrink-0">{reply.createdAt}</span>
+                                      </div>
+                                      <p className="text-slate-200 leading-relaxed break-words">
+                                        {reply.replyToUser && (
+                                          <span className="text-amber-400 font-semibold mr-1.5 bg-amber-500/10 px-1.5 py-0.5 rounded-md">
+                                            @{reply.replyToUser}
+                                          </span>
+                                        )}
+                                        {reply.content}
+                                      </p>
+                                    </div>
+
+                                    {/* Reply Actions */}
+                                    <div className="flex items-center gap-4 text-[10px] text-slate-400 pl-2">
+                                      <button
+                                        onClick={() => handleToggleLikeComment(reply.id, reply.likesCount, reply.isLiked)}
+                                        className={`flex items-center gap-1 font-semibold transition-colors cursor-pointer ${
+                                          isReplyLiked ? 'text-rose-500' : 'hover:text-rose-400'
+                                        }`}
+                                      >
+                                        <Heart className={`w-2.5 h-2.5 ${isReplyLiked ? 'fill-rose-500' : ''}`} />
+                                        <span>{replyLikes > 0 ? replyLikes : 'Thích'}</span>
+                                      </button>
+
+                                      <button
+                                        onClick={() => handleStartReply(reply.id, reply.author.name, c.id)}
+                                        className="flex items-center gap-1 font-semibold hover:text-amber-400 transition-colors cursor-pointer"
+                                      >
+                                        <Reply className="w-2.5 h-2.5" />
+                                        <span>Trả lời</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                      <span className="text-[10px] text-slate-500">{c.createdAt}</span>
                     </div>
-                    <p className="text-slate-200 leading-relaxed">{c.content}</p>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-[11px] text-slate-500 italic text-center py-6">
                 Chưa có bình luận nào. Hãy là người đầu tiên!
@@ -239,7 +425,26 @@ const CommentModal: React.FC<CommentModalProps> = ({
         </div>
 
         {/* Comment input — sticky bottom */}
-        <div className="px-5 py-4 border-t border-slate-800 bg-slate-900 rounded-b-3xl">
+        <div className="px-5 py-3 border-t border-slate-800 bg-slate-900 rounded-b-3xl space-y-2">
+          {/* Active Reply Banner */}
+          {replyingTo && (
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
+              <div className="flex items-center gap-1.5 truncate">
+                <CornerDownRight className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  Đang trả lời <strong className="text-white">@{replyingTo.authorName}</strong>
+                </span>
+              </div>
+              <button
+                onClick={handleCancelReply}
+                className="p-1 hover:bg-amber-500/20 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
+                title="Hủy trả lời"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {isGuest ? (
             <button
               onClick={() => requestAuth('login')}
@@ -248,12 +453,16 @@ const CommentModal: React.FC<CommentModalProps> = ({
               <LogIn className="w-3.5 h-3.5" /> Đăng nhập để bình luận
             </button>
           ) : (
-            <form onSubmit={onCommentSubmit} className="flex items-center gap-2">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2">
               <img src={currentUserAvatar} className="w-8 h-8 rounded-full object-cover shrink-0" alt="" />
               <input
                 ref={inputRef}
                 type="text"
-                placeholder={`Bình luận với tư cách ${currentUserName}...`}
+                placeholder={
+                  replyingTo
+                    ? `Trả lời @${replyingTo.authorName}...`
+                    : `Bình luận với tư cách ${currentUserName}...`
+                }
                 value={newCommentText}
                 onChange={(e) => onCommentChange(e.target.value)}
                 className="flex-1 bg-slate-950 text-slate-200 text-xs rounded-xl px-3 py-2.5 border border-slate-800 focus:border-amber-500 focus:outline-none"
@@ -261,7 +470,7 @@ const CommentModal: React.FC<CommentModalProps> = ({
               <button
                 type="submit"
                 disabled={!newCommentText.trim() || commentSubmitting}
-                className="p-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold disabled:opacity-40 transition-colors cursor-pointer"
+                className="p-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold disabled:opacity-40 transition-colors cursor-pointer shrink-0"
               >
                 {commentSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
@@ -292,7 +501,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [likeLoading, setLikeLoading] = useState(false);
 
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [commentList, setCommentList] = useState<PostComment[]>(post.comments || []);
+  const [commentList, setCommentList] = useState<PostComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
@@ -316,6 +525,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   }, [post.id, post.isLiked, post.likesCount, post.comments, post.commentsCount, post.isBookmarked]);
 
   const handleToggleLike = async () => {
+    if (inTrash) return;
     if (isGuest) { requestAuth('login'); return; }
     if (likeLoading) return;
     const wasLiked = liked;
@@ -350,14 +560,31 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const handleAddComment = async (e: React.FormEvent) => {
+  const handleAddComment = async (
+    e: React.FormEvent, 
+    parentId?: string | null, 
+    replyToUser?: string | null
+  ) => {
     e.preventDefault();
     if (isGuest) { requestAuth('login'); return; }
     if (!newCommentText.trim() || commentSubmitting) return;
     setCommentSubmitting(true);
-    const result = await addComment(post.id, currentUser.id, newCommentText.trim());
+    const result = await addComment(post.id, currentUser.id, newCommentText.trim(), parentId, replyToUser);
     if (result) {
-      setCommentList((prev) => [...prev, result]);
+      if (parentId) {
+        // Nối vào danh sách replies của comment cha
+        setCommentList((prev) =>
+          prev.map((c) => {
+            if (c.id === parentId) {
+              return { ...c, replies: [...(c.replies || []), result] };
+            }
+            return c;
+          })
+        );
+      } else {
+        // Comment gốc
+        setCommentList((prev) => [...prev, result]);
+      }
       setCommentsCount((prev) => prev + 1);
       setNewCommentText('');
     }

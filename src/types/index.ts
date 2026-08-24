@@ -58,6 +58,10 @@ export interface PostComment {
   content: string;
   createdAt: string;
   likesCount: number;
+  isLiked?: boolean;
+  parentId?: string | null;       // ID comment cha nếu đây là câu trả lời
+  replyToUser?: string | null;    // Tên người dùng được reply (@username)
+  replies?: PostComment[];        // Danh sách câu trả lời lồng nhau
 }
 
 export interface SocialPost {

@@ -28,12 +28,17 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================
--- PHẦN 2: CỘT is_deleted CHO XÓA MỀM BÀI VIẾT
+-- PHẦN 2: CỘT is_deleted CHO XÓA MỀM BÀI VIẾT & CỘT CHO COMMENT LỒNG NHAU
 -- ============================================================
 ALTER TABLE public.posts 
 ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;
 
 UPDATE public.posts SET is_deleted = false WHERE is_deleted IS NULL;
+
+-- Cột cho bình luận lồng nhau (TikTok/Facebook Nested Comments)
+ALTER TABLE public.comments
+ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES public.comments(id) ON DELETE CASCADE,
+ADD COLUMN IF NOT EXISTS reply_to_user TEXT;
 
 -- ============================================================
 -- PHẦN 3: BẢNG BOOKMARKS (Lưu bài viết)
