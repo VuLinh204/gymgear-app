@@ -2,13 +2,13 @@
 
 This file lists remaining features, their current status, and notes or related files to inspect.
 
-- [ ] Verify profile follower display and fix UI
-  - Status: in-progress
-  - Notes: Profile UI fetches `/api/follow` but the follower count may not reflect DB state in some cases. Check `src/app/user/[id]/page.tsx` and `src/app/api/follow/route.ts`.
- 
+- [x] Verify profile follower display and fix UI
+  - Status: completed
+  - Notes: Updated `SocialSidebarRight.tsx` with real follower ranking, `toggleFollowUser` & `getTopUsersByFollowers`.
+
 - [x] Fix follow/unfollow edge cases and counts
   - Status: completed
-  - Notes: `toggleFollowUser()` in `src/lib/supabaseDB.ts` implemented; profile follow button updated. Verify RLS in Supabase.
+  - Notes: `toggleFollowUser()` in `src/lib/supabaseDB.ts` implemented; profile follow button updated.
 
 - [x] Add hover-profile popup component
   - Status: completed
@@ -24,33 +24,34 @@ This file lists remaining features, their current status, and notes or related f
 
 - [x] Create `reposts` DB table and RLS policies
   - Status: completed
-  - File: `SUPABASE_SETUP.sql` (run this in Supabase SQL editor if not already applied).
+  - File: `SUPABASE_SETUP.sql`.
 
 - [x] Add API route for repost toggle
   - Status: completed
-  - File: `src/app/api/repost/route.ts`
+  - File: `src/app/api/repost/route.ts`.
 
-- [ ] Add light theme and improve contrast across app
-  - Status: not-started / partial
-  - Notes: Some global CSS variables exist (`src/app/globals.css`) but many Tailwind utilities still hard-code colors. Plan: audit common components and migrate to CSS variables or Tailwind config.
+- [x] Add light theme and improve contrast across app
+  - Status: completed
+  - Notes: `src/app/globals.css` updated with scrollbars, navbar transparency, modal overlays, inputs, and button overrides.
 
 - [x] Replace navbar logo and swap by theme; make clickable
   - Status: completed
-  - Files: `src/components/Navbar.tsx`, `public/LogoGymGear.png`, `public/LogoGymGearDark.png`
+  - Files: `src/components/Navbar.tsx`, `public/LogoGymGear.png`, `public/LogoGymGearDark.png`.
 
 - [x] Remove extra icon near logo
   - Status: completed
 
 - [x] Update footer: logo, contact info, slogan
   - Status: completed
-  - File: `src/components/Footer.tsx`
+  - File: `src/components/Footer.tsx`.
 
-- [x] Make left sidebar 'Bài Viết Đã Lưu' clickable
+- [x] Make left sidebar 'Bài Viết Đã Lưu', 'Showroom' và 'Hội Chủ Phòng Gym' clickable
   - Status: completed
-  - File: `src/components/SocialSidebarLeft.tsx`
+  - Files: `src/components/SocialSidebarLeft.tsx`, `src/app/showroom/page.tsx`, `src/app/community/page.tsx`.
 
-- [ ] Stories feature (design + implementation)
-  - Status: not-started
+- [x] Stories feature (Instagram-style 24h stories strip + full viewer modal)
+  - Status: completed
+  - Files: `src/components/StoriesBar.tsx`, `src/components/StoryViewer.tsx`, `src/app/api/stories/[id]/route.ts`, `SUPABASE_SETUP.sql`.
 
 - [ ] Badges / awards system
   - Status: not-started
@@ -58,9 +59,3 @@ This file lists remaining features, their current status, and notes or related f
 - [ ] Chatbot integration
   - Status: not-started
 
-- [x] Push changes to GitHub with conventional commits
-  - Status: completed
-
-If you want, I can:
-- continue and fix the profile follower display now (I will reproduce the flow, add logging in `src/app/api/follow/route.ts` and `src/lib/supabaseDB.ts`, and patch any mismatch), or
-- open a PR with this checklist and request your review.

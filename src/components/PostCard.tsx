@@ -444,52 +444,50 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <>
-      <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-5 space-y-4 shadow-lg hover:border-slate-700/80 transition-all">
+      <div id={`post-${post.id}`} className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 sm:p-5 space-y-4 shadow-lg hover:border-slate-700/80 transition-all h-fit">
 
-        {/* ── Author header ───────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href={`/user/${post.author.id}`}>
+        {/* ── Post header ────────────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Link href={`/user/${post.author.id}`} className="shrink-0">
               <img
                 src={post.author.avatar}
                 alt={post.author.name}
-                className={`w-11 h-11 rounded-full object-cover border-2 cursor-pointer hover:ring-2 hover:ring-amber-500/50 transition-all ${
+                className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover border-2 cursor-pointer hover:ring-2 hover:ring-amber-500/50 transition-all ${
                   post.author.role === 'premium' ? 'border-amber-400' :
                   post.author.role === 'admin' ? 'border-red-500' : 'border-slate-700'
                 }`}
               />
             </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="relative">
-                  <AuthorPreview userId={post.author.id} initialName={post.author.name} initialAvatar={post.author.avatar} />
-                </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <AuthorPreview userId={post.author.id} initialName={post.author.name} initialAvatar={post.author.avatar} />
                 <RoleBadge role={post.author.role} />
               </div>
-              <div className="flex items-center gap-2 text-[11px] mt-0.5 text-slate-400">
-                <span className="font-medium">{post.author.roleTitle || 'Thành viên'}</span>
-                <span className="text-slate-600">•</span>
-                <span>{post.createdAt}</span>
+              <div className="flex items-center gap-2 text-[11px] mt-0.5 text-slate-400 truncate">
+                <span className="font-medium truncate">{post.author.roleTitle || 'Thành viên'}</span>
+                <span className="text-slate-600 shrink-0">•</span>
+                <span className="shrink-0">{post.createdAt}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {post.isPinned && (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-bold" title="Ghim bởi Tác giả">
-                <Pin className="w-3.5 h-3.5 fill-orange-400" /> Ghim
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[11px] font-bold" title="Ghim bởi Tác giả">
+                <Pin className="w-3 h-3 fill-orange-400" /> Ghim
               </div>
             )}
             {post.rating && (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
-                <Star className="w-3.5 h-3.5 fill-amber-400" />
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-bold">
+                <Star className="w-3 h-3 fill-amber-400" />
                 <span>{post.rating.toFixed(1)}</span>
               </div>
             )}
             {canEdit && (
               <button
                 onClick={() => onEdit && onEdit(post)}
-                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
                 title="Chỉnh sửa bài viết"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -499,7 +497,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 transition-colors disabled:opacity-50 cursor-pointer"
+                className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 transition-colors disabled:opacity-50 cursor-pointer"
                 title="Xoá bài viết"
               >
                 {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -509,7 +507,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
 
         {/* ── Post content ────────────────────────────────────────────────── */}
-        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">{post.content}</p>
+        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed break-words">{post.content}</p>
 
         {/* ── Images grid ─────────────────────────────────────────────────── */}
         {post.images && post.images.length > 0 && (
@@ -530,25 +528,25 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* ── Tagged equipment card ────────────────────────────────────────── */}
         {post.taggedEquipment && (
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 transition-colors">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 hover:border-amber-500/40 transition-colors overflow-hidden">
+            <div className="flex flex-col gap-2.5">
               <div
-                className="flex items-center gap-3 cursor-pointer group"
+                className="flex items-center gap-2.5 cursor-pointer group min-w-0"
                 onClick={() => onViewEquipment(post.taggedEquipment!)}
               >
                 <img
                   src={post.taggedEquipment.thumbnail}
                   alt={post.taggedEquipment.name}
-                  className="w-16 h-16 rounded-lg object-cover border border-slate-800 shrink-0"
+                  className="w-12 h-12 rounded-lg object-cover border border-slate-800 shrink-0"
                 />
-                <div>
-                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">
-                    Thiết bị được review:
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block truncate">
+                    Máy được review:
                   </span>
-                  <h5 className="text-xs sm:text-sm font-bold text-white group-hover:text-amber-400 line-clamp-1 transition-colors">
+                  <h5 className="text-xs sm:text-sm font-bold text-white group-hover:text-amber-400 truncate transition-colors">
                     {post.taggedEquipment.name}
                   </h5>
-                  <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  <div className="text-[11px] text-slate-400 font-mono truncate">
                     Giá: <span className="text-amber-400 font-semibold">{post.taggedEquipment.priceRange}</span>
                   </div>
                 </div>
@@ -556,9 +554,9 @@ export const PostCard: React.FC<PostCardProps> = ({
 
               <button
                 onClick={() => onBookEquipment(post.taggedEquipment!)}
-                className="shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 transition-all cursor-pointer"
               >
-                <CalendarCheck className="w-3.5 h-3.5" /> Book Thử Máy (Free)
+                <CalendarCheck className="w-3.5 h-3.5" /> Đặt Lịch Thử Máy (Free)
               </button>
             </div>
           </div>
@@ -566,59 +564,59 @@ export const PostCard: React.FC<PostCardProps> = ({
 
         {/* ── Social actions / Trash actions ───────────────────────────────── */}
         {inTrash ? (
-          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-end gap-3 text-xs">
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-end gap-2 text-xs">
             <button
               onClick={handleRestore}
               disabled={isDeleting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all disabled:opacity-50 cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" /> Khôi phục về Feed
+              <RotateCcw className="w-3.5 h-3.5" /> Khôi phục
             </button>
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition-all disabled:opacity-50 cursor-pointer"
             >
-              <Trash2 className="w-4 h-4" /> Xóa vĩnh viễn
+              <Trash2 className="w-3.5 h-3.5" /> Xóa
             </button>
           </div>
         ) : (
           <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
               <button
                 onClick={handleToggleLike}
                 disabled={likeLoading}
-                className={`flex items-center gap-1.5 transition-colors cursor-pointer ${liked ? 'text-rose-500 font-bold' : 'hover:text-rose-400'} disabled:opacity-70`}
+                className={`flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${liked ? 'text-rose-500 font-bold' : 'hover:text-rose-400'} disabled:opacity-70`}
               >
                 {likeLoading
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <Heart className={`w-4 h-4 ${liked ? 'fill-rose-500' : ''}`} />}
-                <span>{likesCount}</span>
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-rose-500' : ''}`} />}
+                <span className="text-[11px] sm:text-xs">{likesCount}</span>
               </button>
 
               <button
                 onClick={handleToggleComments}
-                className="flex items-center gap-1.5 hover:text-amber-400 transition-colors cursor-pointer"
+                className="flex items-center gap-1 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
               >
-                <MessageSquare className="w-4 h-4 text-amber-400/80" />
-                <span>{commentsCount}</span>
+                <MessageSquare className="w-3.5 h-3.5 text-amber-400/80" />
+                <span className="text-[11px] sm:text-xs">{commentsCount}</span>
               </button>
 
               <button
                 onClick={handleShare}
-                className="flex items-center gap-1.5 hover:text-blue-400 transition-colors cursor-pointer"
+                className="flex items-center gap-1 hover:text-blue-400 transition-colors cursor-pointer shrink-0"
               >
-                <Share2 className="w-4 h-4 text-blue-400/80" />
-                <span>{sharesCount || 0}</span>
+                <Share2 className="w-3.5 h-3.5 text-blue-400/80" />
+                <span className="text-[11px] sm:text-xs">{sharesCount || 0}</span>
               </button>
             </div>
 
             <button
               onClick={handleBookmark}
-              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${bookmarked ? 'text-amber-400 bg-amber-500/10' : 'hover:text-amber-400'}`}
+              className={`p-1 rounded-lg transition-colors cursor-pointer shrink-0 ${bookmarked ? 'text-amber-400 bg-amber-500/10' : 'hover:text-amber-400'}`}
               title={bookmarked ? 'Bỏ lưu' : 'Lưu bài viết'}
             >
-              <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-amber-400' : ''}`} />
+              <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-amber-400' : ''}`} />
             </button>
           </div>
         )}

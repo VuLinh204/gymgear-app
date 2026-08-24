@@ -133,13 +133,19 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- Bảng lưu stories
 CREATE TABLE IF NOT EXISTS public.stories (
   id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  author_id    UUID NOT NULL,                                              -- auth.uid() của người đăng
-  image_url    TEXT NOT NULL,                                              -- URL ảnh từ Supabase Storage
-  caption      TEXT,                                                       -- Caption ngắn (tối đa 150 ký tự)
+  author_auth  TEXT,                                                       -- auth.uid()
+  author_id    UUID REFERENCES public.users(id) ON DELETE CASCADE,         -- users.id
+  image_url    TEXT NOT NULL,                                              -- URL ảnh
+  caption      TEXT,                                                       -- Caption ngắn
   equipment_id TEXT REFERENCES public.equipments(id) ON DELETE SET NULL,  -- gắn thẻ máy tập (optional)
   created_at   TIMESTAMPTZ DEFAULT NOW(),
   expires_at   TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 hours')
 );
+
+-- Đảm bảo cột author_auth luôn tồn tại nếu bảng đã được tạo trước đó
+ALTER TABLE public.stories ADD COLUMN IF NOT EXISTS author_auth TEXT;
+ALTER TABLE public.stories ADD COLUMN IF NOT EXISTS author_id UUID REFERENCES public.users(id) ON DELETE CASCADE;
+
 
 ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
 
@@ -152,13 +158,13 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- Chỉ người đã đăng nhập mới tạo được story
 DO $$ BEGIN
   CREATE POLICY "stories_insert_auth" ON public.stories
-    FOR INSERT WITH CHECK (author_id = auth.uid());
+    FOR INSERT WITH CHECK (auth.uid()::text = author_auth);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Chỉ chủ story mới xoá được
 DO $$ BEGIN
   CREATE POLICY "stories_delete_own" ON public.stories
-    FOR DELETE USING (author_id = auth.uid());
+    FOR DELETE USING (auth.uid()::text = author_auth);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Bảng tracking ai đã xem story nào
@@ -183,3 +189,104 @@ DO $$ BEGIN
   CREATE POLICY "story_views_insert_auth" ON public.story_views
     FOR INSERT WITH CHECK (viewer_id = auth.uid());
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- PHẦN 8: BẢNG NOTIFICATIONS (Trung tâm thông báo)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     TEXT NOT NULL,                                              -- Người nhận (auth_id hoặc users.id)
+  actor_id    TEXT,                                                       -- Người tạo hành động
+  actor_name  TEXT,
+  actor_avatar TEXT,
+  type        TEXT NOT NULL,                                              -- 'like', 'comment', 'follow', 'booking', 'system'
+  title       TEXT NOT NULL,
+  content     TEXT NOT NULL,
+  target_id   TEXT,                                                       -- ID bài viết, booking hoặc link
+  is_read     BOOLEAN DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "notifications_select_all" ON public.notifications
+    FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "notifications_insert_all" ON public.notifications
+    FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "notifications_update_all" ON public.notifications
+    FOR UPDATE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- PHẦN 9: BẢNG CHAT & TIN NHẮN (Direct Gym Chat)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.chat_messages (
+  id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  sender_id       TEXT NOT NULL,
+  sender_name     TEXT,
+  sender_avatar   TEXT,
+  receiver_id     TEXT NOT NULL,
+  text            TEXT NOT NULL,
+  image_url       TEXT,
+  equipment_id    TEXT,
+  is_read         BOOLEAN DEFAULT false,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "chat_messages_select_all" ON public.chat_messages
+    FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "chat_messages_insert_all" ON public.chat_messages
+    FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "chat_messages_update_all" ON public.chat_messages
+    FOR UPDATE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- PHẦN 10: BẢNG KỶ LỤC TẬP LUYỆN PR (Personal Records)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.user_prs (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id       TEXT NOT NULL,
+  exercise_name TEXT NOT NULL,                                            -- 'Bench Press', 'Leg Press', 'Squat', v.v.
+  weight_kg     NUMERIC NOT NULL,
+  reps          INTEGER DEFAULT 1,
+  notes         TEXT,
+  equipment_id  TEXT,
+  achieved_at   TIMESTAMPTZ DEFAULT NOW(),
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.user_prs ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "user_prs_select_all" ON public.user_prs
+    FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "user_prs_insert_all" ON public.user_prs
+    FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "user_prs_delete_all" ON public.user_prs
+    FOR DELETE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+

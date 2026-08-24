@@ -4,7 +4,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { CATEGORIES } from '@/data/mockData';
 import { CategoryType } from '@/types';
-import { Newspaper, Dumbbell, MapPin, Bookmark, Sparkles, Activity, Home, Layers, Disc, Grid, Users, Crown, ShieldCheck, UserCheck, Eye, User, Settings } from 'lucide-react';
+import { Newspaper, Dumbbell, MapPin, Bookmark, Sparkles, Activity, Home, Layers, Disc, Grid, Users, Crown, ShieldCheck, UserCheck, Eye, User, Settings, Trophy, Scale, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface SocialSidebarLeftProps {
@@ -12,13 +12,17 @@ interface SocialSidebarLeftProps {
   onSelectCategory: (cat: CategoryType) => void;
   onOpenBooking: () => void;
   onOpenSaved?: () => void;
+  onOpenPRTracker?: () => void;
+  onOpenCompare?: () => void;
 }
 
 export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
   activeCategory,
   onSelectCategory,
   onOpenBooking,
-  onOpenSaved
+  onOpenSaved,
+  onOpenPRTracker,
+  onOpenCompare
 }) => {
   const { currentUser, role, isGuest, isPremium, isAdmin, requestAuth } = useAuth();
 
@@ -152,18 +156,36 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
           <span>Bảng Tin Review Mới Nhất</span>
         </button>
 
-        <button
+        <Link
+          href="/showroom"
           className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
         >
           <MapPin className="w-4 h-4 text-orange-400" />
           <span>Showroom Có Máy Thử (30+)</span>
-        </button>
+        </Link>
 
-        <button
+        <Link
+          href="/community"
           className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
         >
           <Users className="w-4 h-4 text-blue-400" />
           <span>Hội Chủ Phòng Gym & PT</span>
+        </Link>
+
+        <button
+          onClick={() => onOpenPRTracker && onOpenPRTracker()}
+          className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+        >
+          <Trophy className="w-4 h-4 text-yellow-400" />
+          <span>Kỷ Lục PR Của Bạn</span>
+        </button>
+
+        <button
+          onClick={() => onOpenCompare && onOpenCompare()}
+          className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+        >
+          <Scale className="w-4 h-4 text-purple-400" />
+          <span>So Sánh Máy Tập (2 Máy)</span>
         </button>
 
         <button

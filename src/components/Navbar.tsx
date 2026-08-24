@@ -2,16 +2,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn, UserPlus, LogOut, ChevronDown, User, Settings, Sun, Moon } from 'lucide-react';
+import { Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn, UserPlus, LogOut, ChevronDown, User, Settings, Sun, Moon, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
+import NotificationDropdown from './NotificationDropdown';
 
 interface NavbarProps {
   onSearch: (query: string) => void;
   onOpenBooking: () => void;
   onOpenAdminDashboard?: () => void;
+  onOpenSpotlight?: () => void;
+  onOpenGuide?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenAdminDashboard }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  onSearch, 
+  onOpenBooking, 
+  onOpenAdminDashboard,
+  onOpenSpotlight,
+  onOpenGuide
+}) => {
   const { currentUser, isGuest, isPremium, isAdmin, logout, requestAuth } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -54,45 +63,62 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenA
             </Link>
           </div>
 
-          {/* ── Search ───────────────────────────────────────────────────── */}
+          {/* ── Search (Spotlight Trigger) ─────────────────────────────────── */}
           <div className="hidden md:flex flex-1 max-w-md">
-            <div className="relative w-full">
-              <Search className="w-4 h-4 text-[var(--foreground-dim)] absolute left-3.5 top-2.5" />
+            <div 
+              onClick={onOpenSpotlight}
+              className="relative w-full cursor-pointer group"
+            >
+              <Search className="w-4 h-4 text-[var(--foreground-dim)] group-hover:text-amber-400 absolute left-3.5 top-2.5 transition" />
               <input
                 type="text"
-                placeholder="Tìm review, máy chạy bộ, smith machine..."
-                value={searchQuery}
-                onChange={handleSearch}
-                className="w-full bg-slate-900 text-slate-200 placeholder-slate-400 text-xs sm:text-sm rounded-xl pl-10 pr-4 py-2 border border-slate-800 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 transition"
+                readOnly
+                placeholder="Tìm máy tập, bài review, PT..."
+                className="w-full bg-slate-900 text-slate-200 placeholder-slate-400 text-xs sm:text-sm rounded-xl pl-10 pr-16 py-2 border border-slate-800 group-hover:border-amber-500/50 cursor-pointer transition"
               />
+              <div className="absolute right-2.5 top-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-400 font-mono">
+                <span>Ctrl</span>
+                <span>K</span>
+              </div>
             </div>
           </div>
 
           {/* ── Right controls ────────────────────────────────────────────── */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="hidden md:flex items-center gap-1.5 lg:gap-2 shrink-0">
 
             {/* Admin panel button (chỉ hiện với Admin) */}
             {isAdmin && (
               <button
                 onClick={onOpenAdminDashboard}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30 transition"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40 hover:bg-red-500/30 transition"
               >
-                <ShieldAlert className="w-4 h-4 text-red-400" /> Admin Panel
+                <ShieldAlert className="w-4 h-4 text-red-400" />
+                <span className="hidden xl:inline">Admin Panel</span>
               </button>
             )}
 
             {/* VIP badge (chỉ hiện với Premium) */}
             {isPremium && (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
-                <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> VIP Premium
+              <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+                <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span className="hidden xl:inline">VIP Premium</span>
               </div>
             )}
 
-            {/* Notification bell */}
-            <button className="relative p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-            </button>
+            {/* Nút Bảng Hướng Dẫn & Phím Tắt */}
+            {onOpenGuide && (
+              <button
+                onClick={onOpenGuide}
+                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition"
+                title="Hướng dẫn tính năng & Phím tắt (Nhấn ? hoặc Ctrl + /)"
+                aria-label="Hướng dẫn"
+              >
+                <HelpCircle className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Notification dropdown */}
+            <NotificationDropdown onOpenBooking={() => onOpenBooking()} />
 
             {/* Theme toggle */}
             <button
@@ -106,9 +132,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onSearch, onOpenBooking, onOpenA
             {/* Book button (luôn hiển thị) */}
             <button
               onClick={onOpenBooking}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-md shadow-orange-500/20 transition"
+              className="inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 text-xs font-bold text-slate-950 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 transition font-bold"
             >
-              <CalendarCheck className="w-4 h-4" /> Đặt Lịch Thử Máy
+              <CalendarCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Đặt Lịch</span>
+              <span className="hidden xl:inline">Thử Máy</span>
             </button>
 
             {/* Auth section */}

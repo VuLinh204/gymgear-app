@@ -798,3 +798,755 @@ export async function toggleFollowUser(targetUserId: string, followerUserId?: st
   return { following: !existing, followersCount: followers };
 }
 
+// ── TOP USERS BY FOLLOWERS ────────────────────────────────────────────────────
+export interface TopUser {
+  id: string;
+  name: string;
+  avatar: string;
+  roleTitle?: string;
+  followersCount: number;
+}
+
+export async function getTopUsersByFollowers(limit: number = 3): Promise<TopUser[]> {
+  // Đếm số follows theo following_auth, join với users để lấy thông tin
+  const { data, error } = await supabase
+    .from('follows')
+    .select('following_auth')
+    .limit(1000); // Lấy đủ dữ liệu để đếm
+
+  if (error || !data) return [];
+
+  // Đếm follower theo từng following_auth
+  const countMap: Record<string, number> = {};
+  data.forEach((row: any) => {
+    countMap[row.following_auth] = (countMap[row.following_auth] || 0) + 1;
+  });
+
+  // Sort theo số followers giảm dần
+  const sorted = Object.entries(countMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit * 2); // Lấy dư để phòng user không tồn tại
+
+  if (sorted.length === 0) return [];
+
+  const authIds = sorted.map(([authId]) => authId);
+
+  // Lấy thông tin user theo auth_id
+  const { data: users, error: userErr } = await supabase
+    .from('users')
+    .select('id, name, avatar, role_title')
+    .in('auth_id', authIds);
+
+  if (userErr || !users) return [];
+
+  // Map auth_id → user info
+  const userMap: Record<string, any> = {};
+  // We need auth_id in users query
+  const { data: usersWithAuth } = await supabase
+    .from('users')
+    .select('id, auth_id, name, avatar, role_title')
+    .in('auth_id', authIds);
+
+  (usersWithAuth || []).forEach((u: any) => {
+    userMap[u.auth_id] = u;
+  });
+
+  const result: TopUser[] = sorted
+    .filter(([authId]) => userMap[authId])
+    .slice(0, limit)
+    .map(([authId, count]) => ({
+      id: userMap[authId].id,
+      name: userMap[authId].name,
+      avatar: userMap[authId].avatar || '/default-avatar.svg',
+      roleTitle: userMap[authId].role_title,
+      followersCount: count,
+    }));
+
+  return result;
+}
+
+// ── STORIES ──────────────────────────────────────────────────────────────────
+export interface Story {
+  id: string;
+  authorId: string;
+  authorAuth?: string;
+  authorName: string;
+  authorAvatar: string;
+  imageUrl: string;
+  caption?: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+const LOCAL_STORIES_KEY = 'gymgear_active_stories';
+
+function getLocalStories(): Story[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_STORIES_KEY);
+    if (!raw) return [];
+    const parsed: Story[] = JSON.parse(raw);
+    const now = Date.now();
+    // Lọc các story chưa hết hạn (24h)
+    return parsed.filter(s => new Date(s.expiresAt).getTime() > now);
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalStory(story: Story) {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getLocalStories();
+    const updated = [story, ...current.filter(s => s.id !== story.id)];
+    localStorage.setItem(LOCAL_STORIES_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Không thể lưu story vào localStorage:', e);
+  }
+}
+
+function removeLocalStory(storyId: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getLocalStories();
+    const updated = current.filter(s => s.id !== storyId);
+    localStorage.setItem(LOCAL_STORIES_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Không thể xóa story từ localStorage:', e);
+  }
+}
+
+export async function fetchActiveStories(): Promise<Story[]> {
+  let dbStories: Story[] = [];
+
+  try {
+    // 1. Thử query có join bảng users
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*, author:users(*)')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const nowTime = Date.now();
+      dbStories = data
+        .filter((s: any) => !s.expires_at || new Date(s.expires_at).getTime() > nowTime)
+        .map((s: any) => ({
+          id: s.id,
+          authorId: s.author?.id || s.author_id || s.author_auth || '',
+          authorAuth: s.author_auth || '',
+          authorName: s.author?.name || 'Thành viên',
+          authorAvatar: s.author?.avatar || '/default-avatar.svg',
+          imageUrl: s.image_url,
+          caption: s.caption,
+          createdAt: s.created_at || new Date().toISOString(),
+          expiresAt: s.expires_at || new Date(Date.now() + 86400000).toISOString(),
+        }));
+    } else if (error) {
+      // 2. Fallback nếu join author:users không khả dụng
+      const { data: rawData, error: rawError } = await supabase
+        .from('stories')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!rawError && rawData) {
+        const userIds = Array.from(new Set(rawData.map((s: any) => s.author_id).filter(Boolean)));
+        let userMap: Record<string, any> = {};
+        if (userIds.length > 0) {
+          const { data: usersData } = await supabase.from('users').select('id, name, avatar').in('id', userIds);
+          (usersData || []).forEach((u: any) => { userMap[u.id] = u; });
+        }
+
+        const nowTime = Date.now();
+        dbStories = rawData
+          .filter((s: any) => !s.expires_at || new Date(s.expires_at).getTime() > nowTime)
+          .map((s: any) => {
+            const user = userMap[s.author_id];
+            return {
+              id: s.id,
+              authorId: s.author_id || s.author_auth || '',
+              authorAuth: s.author_auth || '',
+              authorName: user?.name || 'Thành viên',
+              authorAvatar: user?.avatar || '/default-avatar.svg',
+              imageUrl: s.image_url,
+              caption: s.caption,
+              createdAt: s.created_at || new Date().toISOString(),
+              expiresAt: s.expires_at || new Date(Date.now() + 86400000).toISOString(),
+            };
+          });
+      }
+    }
+  } catch (err) {
+    console.warn('Lỗi khi tải stories từ Supabase:', err);
+  }
+
+  // Kết hợp với Local Stories (đảm bảo story vừa đăng hiển thị 100% ngay lập tức)
+  const localStories = getLocalStories();
+  const storyMap = new Map<string, Story>();
+  localStories.forEach(s => storyMap.set(s.id, s));
+  dbStories.forEach(s => storyMap.set(s.id, s));
+
+  return Array.from(storyMap.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function createStory(
+  imageUrl: string, 
+  caption?: string, 
+  equipmentId?: string
+): Promise<{ success: boolean; error?: string; story?: Story }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const authId = session?.user?.id;
+
+  // Lấy thông tin user hiện tại (hồ sơ profile)
+  let userProfile: any = null;
+  if (authId) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    userProfile = profile;
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  const newStoryId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `story_${Date.now()}`;
+
+  const createdStory: Story = {
+    id: newStoryId,
+    authorId: userProfile?.id || authId || 'current_user',
+    authorAuth: authId || '',
+    authorName: userProfile?.name || session?.user?.user_metadata?.name || 'Bạn',
+    authorAvatar: userProfile?.avatar || '/default-avatar.svg',
+    imageUrl: imageUrl,
+    caption: caption,
+    createdAt: now.toISOString(),
+    expiresAt: expiresAt,
+  };
+
+  // 1. Lưu ngay vào LocalStorage để story hiển thị ngay lập tức (Instant UI)
+  saveLocalStory(createdStory);
+
+  // 2. Ghi vào Supabase Database nếu đã có phiên đăng nhập
+  if (authId) {
+    const payload: any = {
+      id: newStoryId,
+      author_auth: authId,
+      image_url: imageUrl,
+      caption: caption || null,
+      created_at: now.toISOString(),
+      expires_at: expiresAt,
+    };
+
+    if (userProfile?.id) payload.author_id = userProfile.id;
+    if (equipmentId) payload.equipment_id = equipmentId;
+
+    try {
+      const { error } = await supabase.from('stories').insert(payload);
+      if (error) {
+        console.warn('Supabase DB insert warning (đã lưu local story):', error.message);
+      }
+    } catch (dbErr) {
+      console.warn('Supabase insert exception:', dbErr);
+    }
+  }
+
+  return { success: true, story: createdStory };
+}
+
+export async function deleteStory(storyId: string): Promise<boolean> {
+  removeLocalStory(storyId);
+  try {
+    const { error } = await supabase.from('stories').delete().eq('id', storyId);
+    if (error) console.warn('deleteStory Supabase DB:', error.message);
+  } catch (e) {
+    console.warn('deleteStory error:', e);
+  }
+  return true;
+}
+
+// ── 🔔 NOTIFICATIONS SYSTEM ──────────────────────────────────────────────────
+export interface AppNotification {
+  id: string;
+  userId: string;
+  actorId?: string;
+  actorName?: string;
+  actorAvatar?: string;
+  type: 'like' | 'comment' | 'follow' | 'booking' | 'system' | 'pr';
+  title: string;
+  content: string;
+  targetId?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+const LOCAL_NOTIFS_KEY = 'gymgear_notifications_cache';
+
+const INITIAL_SAMPLE_NOTIFS: AppNotification[] = [
+  {
+    id: 'notif-1',
+    userId: 'current_user',
+    actorId: 'usr-pt-1',
+    actorName: 'HLV Tuấn Anh',
+    actorAvatar: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=100&auto=format&fit=crop&q=80',
+    type: 'booking',
+    title: 'Lịch hẹn Showroom đã được xác nhận',
+    content: 'Buổi trải nghiệm máy Impulse PT300H tại Showroom Cầu Giấy đã sẵn sàng.',
+    targetId: 'bk-1',
+    isRead: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
+  },
+  {
+    id: 'notif-2',
+    userId: 'current_user',
+    actorId: 'usr-2',
+    actorName: 'Minh Hoàng Gym',
+    actorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+    type: 'like',
+    title: 'Đã thả tim bài viết của bạn',
+    content: 'Minh Hoàng và 4 người khác đã thích bài viết review máy Smith Machine của bạn.',
+    targetId: 'post-1',
+    isRead: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+  },
+  {
+    id: 'notif-3',
+    userId: 'current_user',
+    actorId: 'system',
+    actorName: 'Hệ thống GymGear',
+    actorAvatar: '/default-avatar.svg',
+    type: 'system',
+    title: 'Chào mừng thành viên VIP',
+    content: 'Bạn được nhận ưu đãi chiết khấu 15% khi đặt lịch mua thiết bị hôm nay.',
+    isRead: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+  },
+];
+
+function getLocalNotifs(): AppNotification[] {
+  if (typeof window === 'undefined') return INITIAL_SAMPLE_NOTIFS;
+  try {
+    const raw = localStorage.getItem(LOCAL_NOTIFS_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_NOTIFS_KEY, JSON.stringify(INITIAL_SAMPLE_NOTIFS));
+      return INITIAL_SAMPLE_NOTIFS;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_SAMPLE_NOTIFS;
+  }
+}
+
+function saveLocalNotifs(notifs: AppNotification[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_NOTIFS_KEY, JSON.stringify(notifs));
+  } catch (e) {
+    console.warn('Không thể lưu notifications vào localStorage:', e);
+  }
+}
+
+export async function fetchNotifications(userId?: string): Promise<AppNotification[]> {
+  let dbNotifs: AppNotification[] = [];
+  try {
+    const authId = await getCurrentAuthId();
+    if (authId) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .or(`user_id.eq.${authId},user_id.eq.current_user`)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        dbNotifs = data.map((n: any) => ({
+          id: n.id,
+          userId: n.user_id,
+          actorId: n.actor_id,
+          actorName: n.actor_name || 'Hệ thống',
+          actorAvatar: n.actor_avatar || '/default-avatar.svg',
+          type: n.type || 'system',
+          title: n.title,
+          content: n.content,
+          targetId: n.target_id,
+          isRead: !!n.is_read,
+          createdAt: n.created_at,
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Lỗi khi fetch notifications từ DB:', e);
+  }
+
+  const local = getLocalNotifs();
+  const notifMap = new Map<string, AppNotification>();
+  local.forEach(n => notifMap.set(n.id, n));
+  dbNotifs.forEach(n => notifMap.set(n.id, n));
+
+  return Array.from(notifMap.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function markNotificationAsRead(id: string): Promise<boolean> {
+  const local = getLocalNotifs();
+  const updated = local.map(n => n.id === id ? { ...n, isRead: true } : n);
+  saveLocalNotifs(updated);
+
+  try {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+  } catch (_) {}
+  return true;
+}
+
+export async function markAllNotificationsAsRead(): Promise<boolean> {
+  const local = getLocalNotifs();
+  const updated = local.map(n => ({ ...n, isRead: true }));
+  saveLocalNotifs(updated);
+
+  try {
+    const authId = await getCurrentAuthId();
+    if (authId) {
+      await supabase.from('notifications').update({ is_read: true }).eq('user_id', authId);
+    }
+  } catch (_) {}
+  return true;
+}
+
+// ── 💬 DIRECT GYM CHAT SYSTEM ────────────────────────────────────────────────
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  receiverId: string;
+  text: string;
+  imageUrl?: string;
+  equipmentId?: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export interface ChatContact {
+  id: string;
+  name: string;
+  avatar: string;
+  roleTitle: string;
+  isOnline: boolean;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+}
+
+const LOCAL_CHAT_KEY = 'gymgear_chat_messages_cache';
+
+const INITIAL_CONTACTS: ChatContact[] = [
+  {
+    id: 'pt-tuananh',
+    name: 'HLV Tuấn Anh (PT Chuyên Sâu)',
+    avatar: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=100&auto=format&fit=crop&q=80',
+    roleTitle: 'Master Trainer • Impulse Fitness',
+    isOnline: true,
+    lastMessage: 'Chào bạn! Bạn cần tư vấn về máy tập hay lịch tập Push-Pull-Legs?',
+    lastMessageTime: 'Vừa xong',
+    unreadCount: 1,
+  },
+  {
+    id: 'showroom-support',
+    name: 'Tư Vấn Showroom GymGear',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+    roleTitle: 'Chuyên viên Thiết Bị Cao Cấp',
+    isOnline: true,
+    lastMessage: 'Showroom Cầu Giấy và Bình Thạnh hiện đang có sẵn máy DHZ Fusion để thử.',
+    lastMessageTime: '15 phút trước',
+    unreadCount: 0,
+  },
+  {
+    id: 'gymer-lananh',
+    name: 'Lan Anh Fitness',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80',
+    roleTitle: 'Hội viên VIP • 3 năm kinh nghiệm',
+    isOnline: false,
+    lastMessage: 'Máy Smith Machine tập mông đùi cực vào cơ luôn nhé bạn!',
+    lastMessageTime: 'Hôm qua',
+    unreadCount: 0,
+  },
+];
+
+const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
+  'pt-tuananh': [
+    {
+      id: 'msg-1',
+      conversationId: 'pt-tuananh',
+      senderId: 'pt-tuananh',
+      senderName: 'HLV Tuấn Anh',
+      senderAvatar: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?w=100&auto=format&fit=crop&q=80',
+      receiverId: 'current_user',
+      text: 'Chào bạn! Mình là Tuấn Anh - HLV tại GymGear. Bạn cần tư vấn về máy tập hay lịch tập Push-Pull-Legs?',
+      createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+      isRead: true,
+    },
+  ],
+  'showroom-support': [
+    {
+      id: 'msg-2',
+      conversationId: 'showroom-support',
+      senderId: 'showroom-support',
+      senderName: 'Tư Vấn Showroom GymGear',
+      senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      receiverId: 'current_user',
+      text: 'Showroom Cầu Giấy và Bình Thạnh hiện đang có sẵn máy DHZ Fusion để thử.',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+      isRead: true,
+    },
+  ],
+};
+
+function getLocalChatData(): Record<string, ChatMessage[]> {
+  if (typeof window === 'undefined') return INITIAL_MESSAGES;
+  try {
+    const raw = localStorage.getItem(LOCAL_CHAT_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_CHAT_KEY, JSON.stringify(INITIAL_MESSAGES));
+      return INITIAL_MESSAGES;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_MESSAGES;
+  }
+}
+
+function saveLocalChatData(data: Record<string, ChatMessage[]>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_CHAT_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Lỗi lưu tin nhắn chat:', e);
+  }
+}
+
+export async function fetchChatContacts(): Promise<ChatContact[]> {
+  return INITIAL_CONTACTS;
+}
+
+export async function fetchChatMessages(contactId: string): Promise<ChatMessage[]> {
+  const localData = getLocalChatData();
+  const messages = localData[contactId] || [];
+  return [...messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+}
+
+export async function sendChatMessage(
+  contactId: string,
+  text: string,
+  imageUrl?: string,
+  equipmentId?: string,
+  currentUser?: UserAuthor
+): Promise<ChatMessage> {
+  const now = new Date();
+  const newMsg: ChatMessage = {
+    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    conversationId: contactId,
+    senderId: currentUser?.id || 'current_user',
+    senderName: currentUser?.name || 'Bạn',
+    senderAvatar: currentUser?.avatar || '/default-avatar.svg',
+    receiverId: contactId,
+    text,
+    imageUrl,
+    equipmentId,
+    createdAt: now.toISOString(),
+    isRead: false,
+  };
+
+  const localData = getLocalChatData();
+  const currentList = localData[contactId] || [];
+  localData[contactId] = [...currentList, newMsg];
+  saveLocalChatData(localData);
+
+  // Sync Supabase nếu có DB
+  try {
+    const authId = await getCurrentAuthId();
+    if (authId) {
+      await supabase.from('chat_messages').insert({
+        conversation_id: contactId,
+        sender_id: authId,
+        sender_name: currentUser?.name,
+        sender_avatar: currentUser?.avatar,
+        receiver_id: contactId,
+        text,
+        image_url: imageUrl,
+        equipment_id: equipmentId,
+        is_read: false,
+      });
+    }
+  } catch (_) {}
+
+  return newMsg;
+}
+
+// ── 📊 WORKOUT PR TRACKER (Kỷ lục cá nhân) ──────────────────────────────────
+export interface UserPRRecord {
+  id: string;
+  userId: string;
+  exerciseName: string;
+  weightKg: number;
+  reps: number;
+  notes?: string;
+  equipmentId?: string;
+  achievedAt: string;
+  createdAt: string;
+}
+
+const LOCAL_PRS_KEY = 'gymgear_user_prs_cache';
+
+const INITIAL_SAMPLE_PRS: UserPRRecord[] = [
+  {
+    id: 'pr-1',
+    userId: 'current_user',
+    exerciseName: 'Đẩy Ngực Ngang (Bench Press)',
+    weightKg: 100,
+    reps: 1,
+    notes: 'Kỷ lục mới đạt được với máy Smith Machine chuẩn form!',
+    equipmentId: 'eq-1',
+    achievedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+  },
+  {
+    id: 'pr-2',
+    userId: 'current_user',
+    exerciseName: 'Đạp Đùi Nghiêng (Leg Press)',
+    weightKg: 240,
+    reps: 6,
+    notes: 'Máy DHZ Fusion chuyển động siêu mượt, không đau lưng.',
+    equipmentId: 'eq-2',
+    achievedAt: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
+  },
+  {
+    id: 'pr-3',
+    userId: 'current_user',
+    exerciseName: 'Kéo Xô Đôi (Lat Pulldown)',
+    weightKg: 85,
+    reps: 8,
+    notes: 'Cảm giác siết xô cực đã.',
+    achievedAt: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(),
+  },
+];
+
+function getLocalPRs(): UserPRRecord[] {
+  if (typeof window === 'undefined') return INITIAL_SAMPLE_PRS;
+  try {
+    const raw = localStorage.getItem(LOCAL_PRS_KEY);
+    if (!raw) {
+      localStorage.setItem(LOCAL_PRS_KEY, JSON.stringify(INITIAL_SAMPLE_PRS));
+      return INITIAL_SAMPLE_PRS;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return INITIAL_SAMPLE_PRS;
+  }
+}
+
+function saveLocalPRs(prs: UserPRRecord[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_PRS_KEY, JSON.stringify(prs));
+  } catch (e) {
+    console.warn('Lỗi lưu PRs:', e);
+  }
+}
+
+export async function fetchUserPRs(userId?: string): Promise<UserPRRecord[]> {
+  let dbPRs: UserPRRecord[] = [];
+  try {
+    const authId = await getCurrentAuthId();
+    if (authId) {
+      const { data, error } = await supabase
+        .from('user_prs')
+        .select('*')
+        .or(`user_id.eq.${authId},user_id.eq.current_user`)
+        .order('achieved_at', { ascending: false });
+
+      if (!error && data) {
+        dbPRs = data.map((p: any) => ({
+          id: p.id,
+          userId: p.user_id,
+          exerciseName: p.exercise_name,
+          weightKg: Number(p.weight_kg),
+          reps: p.reps || 1,
+          notes: p.notes,
+          equipmentId: p.equipment_id,
+          achievedAt: p.achieved_at || p.created_at,
+          createdAt: p.created_at,
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Lỗi khi fetch PRs từ DB:', e);
+  }
+
+  const local = getLocalPRs();
+  const prMap = new Map<string, UserPRRecord>();
+  local.forEach(p => prMap.set(p.id, p));
+  dbPRs.forEach(p => prMap.set(p.id, p));
+
+  return Array.from(prMap.values()).sort(
+    (a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime()
+  );
+}
+
+export async function saveUserPR(
+  exerciseName: string,
+  weightKg: number,
+  reps: number = 1,
+  notes?: string,
+  equipmentId?: string
+): Promise<UserPRRecord> {
+  const now = new Date().toISOString();
+  const newPR: UserPRRecord = {
+    id: `pr_${Date.now()}`,
+    userId: 'current_user',
+    exerciseName,
+    weightKg,
+    reps,
+    notes,
+    equipmentId,
+    achievedAt: now,
+    createdAt: now,
+  };
+
+  const current = getLocalPRs();
+  const updated = [newPR, ...current];
+  saveLocalPRs(updated);
+
+  try {
+    const authId = await getCurrentAuthId();
+    if (authId) {
+      newPR.userId = authId;
+      await supabase.from('user_prs').insert({
+        user_id: authId,
+        exercise_name: exerciseName,
+        weight_kg: weightKg,
+        reps,
+        notes: notes || null,
+        equipment_id: equipmentId || null,
+        achieved_at: now,
+      });
+    }
+  } catch (_) {}
+
+  return newPR;
+}
+
+export async function deleteUserPR(prId: string): Promise<boolean> {
+  const current = getLocalPRs();
+  saveLocalPRs(current.filter(p => p.id !== prId));
+  try {
+    await supabase.from('user_prs').delete().eq('id', prId);
+  } catch (_) {}
+  return true;
+}
+

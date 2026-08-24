@@ -68,6 +68,21 @@
 .theme-light .bg-amber-500\/:\/10 { background-color: rgba(249,115,22,0.08) !important; }
 .theme-light .border-amber-500 { border-color: #f97316 !important; }
 
+/* Navbar in light mode */
+.theme-light header[class*="bg-slate-"] {
+  background-color: rgba(243,246,249,0.95) !important;
+  border-color: rgba(15,23,42,0.08) !important;
+}
+
+/* Modal backdrop */
+.theme-light [class*="bg-black\/"] {
+  background-color: rgba(0,0,0,0.5) !important;
+}
+
+/* Scrollbar in light mode */
+.theme-light ::-webkit-scrollbar-track { background: #e6eef6; }
+.theme-light ::-webkit-scrollbar-thumb { background: #94a3b8; }
+.theme-light ::-webkit-scrollbar-thumb:hover { background: #b75320; }
 
 body {
   background: var(--background);
@@ -108,4 +123,13 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #f59e0b;
+}
+
+/* Utility: hide scrollbar but allow scrolling (for Stories strip) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

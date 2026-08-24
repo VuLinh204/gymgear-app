@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { fetchEquipments } from '@/lib/supabaseDB';
+import { fetchEquipments, getTopUsersByFollowers, toggleFollowUser, isFollowingUser, TopUser } from '@/lib/supabaseDB';
 import { Equipment } from '@/types';
-import { Flame, Star, Award, CalendarCheck, ShieldCheck, MapPin, Sparkles } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Flame, Star, Award, CalendarCheck, Sparkles, UserCheck, Users } from 'lucide-react';
+import Link from 'next/link';
 
 interface SocialSidebarRightProps {
   onViewEquipment: (equipment: Equipment) => void;
@@ -14,11 +16,46 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
   onViewEquipment,
   onOpenBooking
 }) => {
+  const { isGuest, requestAuth } = useAuth();
   const [topEquipments, setTopEquipments] = useState<Equipment[]>([]);
+  const [topUsers, setTopUsers] = useState<TopUser[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const [followLoading, setFollowLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEquipments().then(data => setTopEquipments(data.slice(0, 3)));
+    getTopUsersByFollowers(3).then(setTopUsers);
   }, []);
+
+  // Kiểm tra trạng thái follow của từng user
+  useEffect(() => {
+    if (isGuest || topUsers.length === 0) return;
+    const checkAll = async () => {
+      const results = await Promise.all(topUsers.map(u => isFollowingUser(u.id)));
+      const ids = new Set<string>();
+      topUsers.forEach((u, i) => { if (results[i]) ids.add(u.id); });
+      setFollowingIds(ids);
+    };
+    checkAll();
+  }, [topUsers, isGuest]);
+
+  const handleFollow = async (userId: string) => {
+    if (isGuest) { requestAuth('login'); return; }
+    setFollowLoading(userId);
+    try {
+      const result = await toggleFollowUser(userId);
+      setFollowingIds(prev => {
+        const next = new Set(prev);
+        if (result.following) next.add(userId); else next.delete(userId);
+        return next;
+      });
+      // Cập nhật follower count trong list
+      setTopUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, followersCount: result.followersCount } : u
+      ));
+    } catch (e) { console.error(e); }
+    setFollowLoading(null);
+  };
 
   return (
     <aside className="space-y-6">
@@ -91,48 +128,57 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
         </div>
       </div>
 
-      {/* Top Reviewers / Verified Experts */}
+      {/* Top Reviewers / Verified Experts — Real DB data */}
       <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 space-y-3">
-        <div className="flex items-center space-x-2">
-          <Award className="w-4 h-4 text-amber-400" />
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">Reviewer Uy Tín</h4>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Award className="w-4 h-4 text-amber-400" />
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Reviewer Uy Tín</h4>
+          </div>
+          <Link href="/community" className="text-[10px] text-amber-400 hover:underline">Xem tất cả</Link>
         </div>
 
-        <div className="space-y-3 text-xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-                className="w-8 h-8 rounded-full object-cover border border-amber-500"
-              />
-              <div>
-                <span className="font-bold text-white block">Nguyễn Văn Hùng</span>
-                <span className="text-[10px] text-slate-400">Chủ Gym FitPlus</span>
+        {topUsers.length === 0 ? (
+          <p className="text-[11px] text-slate-500 text-center py-2">Chưa có dữ liệu</p>
+        ) : (
+          <div className="space-y-3 text-xs">
+            {topUsers.map((user) => (
+              <div key={user.id} className="flex items-center justify-between">
+                <Link href={`/user/${user.id}`} className="flex items-center space-x-2 group">
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover border border-amber-500/40 group-hover:border-amber-400 transition-colors"
+                  />
+                  <div>
+                    <span className="font-bold text-white block group-hover:text-amber-400 transition-colors">{user.name}</span>
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {user.followersCount} người theo dõi
+                      {user.roleTitle && <> · {user.roleTitle}</>}
+                    </span>
+                  </div>
+                </Link>
+                <button
+                  onClick={() => handleFollow(user.id)}
+                  disabled={followLoading === user.id}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                    followingIds.has(user.id)
+                      ? 'text-slate-300 bg-slate-700 border-slate-600 hover:bg-slate-600'
+                      : 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30'
+                  } ${followLoading === user.id ? 'opacity-60 cursor-wait' : ''}`}
+                >
+                  {followLoading === user.id ? '...' : followingIds.has(user.id) ? (
+                    <span className="flex items-center gap-1"><UserCheck className="w-3 h-3" /> Đang theo</span>
+                  ) : 'Theo dõi'}
+                </button>
               </div>
-            </div>
-            <button className="px-2.5 py-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg border border-amber-500/30">
-              Theo dõi
-            </button>
+            ))}
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <img
-                src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80"
-                className="w-8 h-8 rounded-full object-cover border border-amber-500"
-              />
-              <div>
-                <span className="font-bold text-white block">Trần Hoàng Nam</span>
-                <span className="text-[10px] text-slate-400">Reviewer Độc Lập</span>
-              </div>
-            </div>
-            <button className="px-2.5 py-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg border border-amber-500/30">
-              Theo dõi
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
     </aside>
   );
 };
+

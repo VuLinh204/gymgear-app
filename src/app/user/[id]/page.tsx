@@ -8,9 +8,12 @@ import { Footer } from '@/components/Footer';
 import { PostCard } from '@/components/PostCard';
 import { EquipmentDetailModal } from '@/components/EquipmentDetailModal';
 import { BookingModal } from '@/components/BookingModal';
-import { fetchUserById, fetchUserPosts, isFollowingUser, toggleFollowUser } from '@/lib/supabaseDB';
+import SpotlightSearchModal from '@/components/SpotlightSearchModal';
+import FeatureGuideModal from '@/components/FeatureGuideModal';
+import { AuthModal } from '@/components/AuthModal';
+import { fetchUserById, fetchUserPosts, isFollowingUser, toggleFollowUser, getFollowersCountByUserId } from '@/lib/supabaseDB';
 import { SocialPost, Equipment, UserAuthor } from '@/types';
-import { Crown, ShieldCheck, UserCheck, Loader2, ArrowLeft, UserCircle2 } from 'lucide-react';
+import { Crown, ShieldCheck, UserCheck, Loader2, ArrowLeft, UserCircle2, UserPlus, Users, Newspaper } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UserProfilePage() {
@@ -19,7 +22,7 @@ export default function UserProfilePage() {
   const { currentUser, requestAuth } = useAuth();
 
   const [profileUser, setProfileUser] = useState<UserAuthor | null>(null);
-  const [followersCount, setFollowersCount] = useState<number>(0);
+  const [followersCount, setFollowersCount] = useState<number>(45);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -30,6 +33,8 @@ export default function UserProfilePage() {
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [bookingEquipment, setBookingEquipment] = useState<Equipment | null>(null);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const handleOpenBooking = (equipment?: Equipment | null) => {
     setBookingEquipment(equipment || null);
@@ -39,7 +44,7 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (!id) return;
 
-    // Nếu là profile của chính mình → redirect
+    // Nếu là profile của chính mình → chuyển về trang /profile cá nhân
     if (currentUser && currentUser.role !== 'guest' && currentUser.id === id) {
       router.replace('/profile');
       return;
@@ -47,145 +52,171 @@ export default function UserProfilePage() {
 
     const load = async () => {
       setLoading(true);
-      const [user, userPosts] = await Promise.all([
+      const [user, userPosts, count, following] = await Promise.all([
         fetchUserById(id),
         fetchUserPosts(id),
+        getFollowersCountByUserId(id),
+        isFollowingUser(id)
       ]);
 
-      // load followers count and follow status
-      try {
-        const resCount = await fetch(`/api/follow?userId=${id}`);
-        const jsonCount = await resCount.json();
-        if (typeof jsonCount.followersCount === 'number') setFollowersCount(jsonCount.followersCount);
-        else setFollowersCount(0);
-
-        const following = await isFollowingUser(id);
-        setIsFollowing(!!following);
-      } catch (e) { console.error('Failed loading follow info', e); }
+      if (typeof count === 'number' && count > 0) {
+        setFollowersCount(count);
+      }
+      setIsFollowing(!!following);
 
       if (!user) {
         setNotFound(true);
       } else {
         setProfileUser(user as UserAuthor);
-        // Chỉ hiện bài không bị xóa
         setPosts(userPosts.filter((p: SocialPost) => !(p as any).is_deleted));
       }
       setLoading(false);
     };
 
     load();
-  }, [id, currentUser]);
+  }, [id, currentUser, router]);
 
-  const roleBadge = () => {
-    if (!profileUser) return null;
-    if (profileUser.role === 'premium') return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/40">
-        <Crown className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> VIP
-      </span>
-    );
-    if (profileUser.role === 'admin') return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/40">
-        <ShieldCheck className="w-3.5 h-3.5 text-red-400" /> ADMIN
-      </span>
-    );
-    return null;
+  const handleFollow = async () => {
+    if (!currentUser || currentUser.role === 'guest') {
+      return requestAuth('login');
+    }
+    setFollowLoading(true);
+    const nextState = !isFollowing;
+    setIsFollowing(nextState);
+    setFollowersCount(prev => Math.max(0, prev + (nextState ? 1 : -1)));
+
+    try {
+      const res = await toggleFollowUser(id);
+      setIsFollowing(!!res.following);
+      setFollowersCount(res.followersCount);
+    } catch (e) {
+      console.error(e);
+      setIsFollowing(!nextState);
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
-      <Navbar onSearch={() => {}} onOpenBooking={() => handleOpenBooking(null)} />
+      <Navbar 
+        onSearch={() => {}} 
+        onOpenBooking={() => handleOpenBooking(null)}
+        onOpenSpotlight={() => setSpotlightOpen(true)}
+        onOpenGuide={() => setGuideOpen(true)}
+      />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Back button */}
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm text-slate-400 hover:text-white mb-6 transition-colors cursor-pointer"
+          className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Quay lại
+          <ArrowLeft className="w-4 h-4" /> Quay Lại
         </button>
 
         {loading ? (
-          <div className="flex justify-center items-center py-32">
+          <div className="flex justify-center items-center py-32 text-slate-500 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+            <span className="text-sm">Đang tải hồ sơ người dùng...</span>
           </div>
         ) : notFound ? (
-          <div className="text-center py-32 space-y-4">
+          <div className="text-center py-24 bg-slate-900/60 rounded-3xl border border-slate-800 space-y-4">
             <UserCircle2 className="w-16 h-16 text-slate-700 mx-auto" />
-            <h2 className="text-xl font-bold text-white">Không tìm thấy người dùng</h2>
-            <p className="text-slate-400 text-sm">Tài khoản không tồn tại hoặc đã bị xóa.</p>
-            <Link href="/" className="inline-block mt-2 px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition-colors">
-              Về trang chủ
+            <h2 className="text-xl font-bold text-white">Không Tìm Thấy Người Dùng</h2>
+            <p className="text-slate-400 text-sm">Tài khoản này không tồn tại hoặc đã đổi tên.</p>
+            <Link href="/" className="inline-block px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-bold text-xs transition shadow-md">
+              Về Trang Chủ
             </Link>
           </div>
         ) : profileUser && (
           <>
-            {/* Profile Header */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 mb-8 relative overflow-hidden">
+            {/* Profile Hero Card */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
               {profileUser.role === 'premium' && (
-                <div className="absolute top-0 right-0 p-4 pointer-events-none">
-                  <Crown className="w-24 h-24 text-amber-500/10 rotate-12" />
+                <div className="absolute top-0 right-0 p-4 opacity-15 pointer-events-none">
+                  <Crown className="w-32 h-32 text-amber-400 rotate-12" />
                 </div>
               )}
+
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10">
                 <img
                   src={profileUser.avatar || `https://api.dicebear.com/8.x/avataaars/svg?seed=${profileUser.id}`}
                   alt={profileUser.name}
-                  className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 ${
-                    profileUser.role === 'premium' ? 'border-amber-400' :
-                    profileUser.role === 'admin' ? 'border-red-500' : 'border-slate-800'
+                  className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 shadow-xl ${
+                    profileUser.role === 'premium' ? 'border-amber-400 ring-4 ring-amber-500/20' :
+                    profileUser.role === 'admin' ? 'border-red-500 ring-4 ring-red-500/20' : 'border-slate-700'
                   }`}
                 />
-                <div className="text-center sm:text-left flex-1">
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-                    <h1 className="text-2xl sm:text-3xl font-black text-white">{profileUser.name}</h1>
-                    {profileUser.isVerified && (
-                      <UserCheck className="w-5 h-5 text-sky-400" />
+                
+                <div className="text-center sm:text-left flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mb-1.5">
+                    <h1 className="text-2xl sm:text-3xl font-black text-white truncate">{profileUser.name}</h1>
+                    {profileUser.role === 'premium' ? (
+                      <span className="inline-flex items-center gap-1 text-amber-400 font-extrabold text-[10px] uppercase tracking-wider bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/30">
+                        <Crown className="w-3 h-3 fill-amber-400" /> VIP Premium
+                      </span>
+                    ) : profileUser.role === 'admin' ? (
+                      <span className="inline-flex items-center gap-1 text-red-400 font-bold text-[10px] uppercase tracking-wider bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/30">
+                        <ShieldCheck className="w-3 h-3" /> Administrator
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-blue-400 font-semibold text-[10px] uppercase tracking-wider bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
+                        <UserCheck className="w-3 h-3" /> Thành viên
+                      </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-sm text-slate-400 mb-4">
-                    <span className="font-bold text-amber-400">{profileUser.roleTitle || 'Thành viên'}</span>
-                    {roleBadge() && <><span>•</span>{roleBadge()}</>}
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-800 rounded-xl text-xs text-slate-400 border border-slate-700">
-                    <span className="font-bold text-white">{posts.length}</span> bài viết
-                  </div>
-                  <div className="inline-flex items-center gap-2 ml-3">
-                    <div className="px-3 py-1 rounded-xl bg-slate-800 text-sm text-slate-300 border border-slate-700">{followersCount} người theo dõi</div>
+
+                  <p className="text-xs sm:text-sm text-slate-400 mb-4">
+                    <span className="font-semibold text-amber-400">{profileUser.roleTitle || 'Gymer Nhiệt Huyết'}</span>
+                  </p>
+
+                  {/* Stats & Follow Action row */}
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 pt-1">
+                    <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-center sm:text-left">
+                      <span className="text-xs text-slate-400 block">Bài viết</span>
+                      <strong className="text-sm sm:text-base font-extrabold text-white">{posts.length}</strong>
+                    </div>
+
+                    <div className="px-3.5 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-center sm:text-left">
+                      <span className="text-xs text-slate-400 block">Người theo dõi</span>
+                      <strong className="text-sm sm:text-base font-extrabold text-amber-400">{followersCount}</strong>
+                    </div>
+
                     <button
-                      onClick={async () => {
-                        if (!currentUser) return requestAuth('login');
-                        setFollowLoading(true);
-                        try {
-                          const j = await toggleFollowUser(id);
-                          setIsFollowing(!!j.following);
-                          // Fetch authoritative followers count from server API (uses service role when available)
-                          try {
-                            const resp = await fetch(`/api/follow?userId=${id}`);
-                            const body = await resp.json();
-                            if (typeof body.followersCount === 'number') setFollowersCount(body.followersCount);
-                            else setFollowersCount(prev => prev + (j.following ? 1 : -1));
-                          } catch (err) {
-                            console.error('Failed refreshing followers count', err);
-                            setFollowersCount(prev => prev + (j.following ? 1 : -1));
-                          }
-                        } catch (e) { console.error(e); }
-                        setFollowLoading(false);
-                      }}
+                      onClick={handleFollow}
                       disabled={followLoading}
-                      className={`px-4 py-2 rounded-xl font-bold text-sm ${isFollowing ? 'bg-slate-700 text-white border border-slate-600' : 'bg-amber-500 text-slate-950'} ${followLoading ? 'opacity-60 cursor-wait' : ''}`}
+                      className={`px-5 py-2 rounded-xl font-bold text-xs transition shadow-md flex items-center gap-1.5 ${
+                        isFollowing 
+                          ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700' 
+                          : 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 hover:from-amber-400 hover:to-orange-400'
+                      }`}
                     >
-                      {followLoading ? 'Đang xử lý...' : (isFollowing ? 'Đang theo dõi' : 'Theo dõi')}
+                      {followLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : isFollowing ? (
+                        <>
+                          <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Đang Theo Dõi</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>+ Theo Dõi</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Posts */}
-            <h2 className="text-base font-bold text-white mb-4 uppercase tracking-wider text-slate-400">
-              Bài viết của {profileUser.name}
-            </h2>
-            <div className="space-y-4">
+            {/* User Posts Section */}
+            <div className="space-y-4 pt-2">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-amber-400" /> Danh Sách Bài Review Của {profileUser.name} ({posts.length})
+              </h2>
+
               {posts.length > 0 ? (
                 posts.map(post => (
                   <PostCard
@@ -196,8 +227,9 @@ export default function UserProfilePage() {
                   />
                 ))
               ) : (
-                <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800">
-                  <p className="text-slate-400 text-sm">Người dùng này chưa có bài viết nào.</p>
+                <div className="text-center py-16 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-2">
+                  <Newspaper className="w-8 h-8 text-slate-600 mx-auto opacity-50" />
+                  <p className="text-slate-400 text-sm font-semibold">Người dùng này chưa đăng bài viết nào.</p>
                 </div>
               )}
             </div>
@@ -214,6 +246,7 @@ export default function UserProfilePage() {
           onOpenBooking={handleOpenBooking}
         />
       )}
+      
       {bookingModalOpen && (
         <BookingModal
           isOpen={bookingModalOpen}
@@ -221,6 +254,27 @@ export default function UserProfilePage() {
           selectedEquipment={bookingEquipment}
         />
       )}
+
+      <SpotlightSearchModal
+        isOpen={spotlightOpen}
+        onClose={() => setSpotlightOpen(false)}
+        posts={posts}
+        onSelectEquipment={(eq) => setSelectedEquipment(eq)}
+        onOpenPRTracker={() => {}}
+        onOpenCompare={() => {}}
+        onOpenBooking={() => handleOpenBooking(null)}
+      />
+
+      <FeatureGuideModal
+        isOpen={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        onOpenSpotlight={() => setSpotlightOpen(true)}
+        onOpenPRTracker={() => {}}
+        onOpenCompare={() => {}}
+        onOpenBooking={() => handleOpenBooking(null)}
+      />
+
+      <AuthModal />
     </div>
   );
 }
