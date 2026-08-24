@@ -134,43 +134,50 @@ body {
   display: none;
 }
 
-/* ── Google Translate Clean Overrides (No intrusive bar) ── */
-.goog-te-banner-frame.skiptranslate,
-.goog-te-banner-frame,
-iframe.goog-te-banner-frame {
-  display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
-}
-
-body {
+/* ── Google Translate Clean Overrides & Layout Stabilization ── */
+html, body {
   top: 0px !important;
   position: static !important;
+  margin-top: 0px !important;
 }
 
-#google_translate_element {
-  position: absolute;
-  top: -9999px;
-  left: -9999px;
-  opacity: 0;
-  pointer-events: none;
-}
-
+.VIpgJd-ZVi9od-ORHb-OEVmcb,
+.VIpgJd-ZVi9od-ORHb-OEVmcb-O3TwSave,
+.VIpgJd-y6EKge,
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+iframe.skiptranslate,
+iframe[id*=":1.container"],
+iframe[id*=":2.container"],
+#goog-gt-tt,
+.goog-tooltip,
+.goog-tooltip:hover,
+.goog-te-balloon-frame,
 .goog-te-gadget {
   display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-.goog-tooltip,
-.goog-tooltip:hover {
+body > .skiptranslate {
   display: none !important;
+}
+
+/* Prevent Google font tag from breaking flex / grid layout */
+font {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  font: inherit !important;
+  vertical-align: baseline !important;
 }
 
 .goog-text-highlight {
   background-color: transparent !important;
   box-shadow: none !important;
-}
-
-.skiptranslate {
-  display: none !important;
 }
 

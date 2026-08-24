@@ -27,6 +27,18 @@ export const GoogleTranslator: React.FC = () => {
 
     setCurrentLang(getCookieLang());
 
+    // Khởi tạo MutationObserver để ngăn Google Translate đẩy layout xuống (top: 40px)
+    const observer = new MutationObserver(() => {
+      if (document.body.style.top && document.body.style.top !== '0px') {
+        document.body.style.top = '0px';
+      }
+      if (document.body.style.position && document.body.style.position !== 'static') {
+        document.body.style.position = 'static';
+      }
+    });
+
+    observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'] });
+
     // Khởi tạo hàm callback cho Google Translate
     window.googleTranslateElementInit = () => {
       if (window.google?.translate?.TranslateElement) {
@@ -52,6 +64,10 @@ export const GoogleTranslator: React.FC = () => {
     } else {
       setScriptLoaded(true);
     }
+
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   const changeLanguage = (lang: 'vi' | 'en') => {
