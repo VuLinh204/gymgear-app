@@ -27,6 +27,29 @@ export const GoogleTranslator: React.FC = () => {
 
     setCurrentLang(getCookieLang());
 
+    // ── Patch Node.removeChild to survive Google Translate DOM moves ──────
+    // Google Translate wraps text nodes in <font> tags and moves them, so
+    // React's removeChild call fails with "node is not a child". We swallow
+    // that specific error so it never reaches the Error Overlay.
+    const originalRemoveChild = Node.prototype.removeChild;
+    // @ts-ignore
+    Node.prototype.removeChild = function <T extends Node>(child: T): T {
+      if (child.parentNode !== this) {
+        // Node was moved by Google Translate — silently ignore
+        return child;
+      }
+      return originalRemoveChild.call(this, child) as T;
+    };
+
+    const originalInsertBefore = Node.prototype.insertBefore;
+    // @ts-ignore
+    Node.prototype.insertBefore = function <T extends Node>(newNode: T, refNode: Node | null): T {
+      if (refNode && refNode.parentNode !== this) {
+        return newNode;
+      }
+      return originalInsertBefore.call(this, newNode, refNode) as T;
+    };
+
     // Khởi tạo MutationObserver để ngăn Google Translate đẩy layout xuống (top: 40px)
     const observer = new MutationObserver(() => {
       if (document.body.style.top && document.body.style.top !== '0px') {
@@ -67,6 +90,9 @@ export const GoogleTranslator: React.FC = () => {
 
     return () => {
       observer.disconnect();
+      // Restore originals on cleanup
+      Node.prototype.removeChild = originalRemoveChild;
+      Node.prototype.insertBefore = originalInsertBefore;
     };
   }, []);
 

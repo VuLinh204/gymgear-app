@@ -28,7 +28,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100" suppressHydrationWarning>
         <AuthProvider>
-          {children}
+          {/* suppressHydrationWarning prevents Google Translate <font> injection from crashing React */}
+          <div id="app-root" suppressHydrationWarning>
+            {children}
+          </div>
         </AuthProvider>
       </body>
     </html>
