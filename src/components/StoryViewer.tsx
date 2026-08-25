@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Story, createNotification } from '@/lib/supabaseDB';
+import { Story, toggleStoryLike, getStoryLikes } from '@/lib/supabaseDB';
 import { useAuth } from '@/context/AuthContext';
 import { X, Trash2, ChevronLeft, ChevronRight, Heart, Sparkles } from 'lucide-react';
 
@@ -36,8 +36,7 @@ export default function StoryViewer({
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [likedStoryIds, setLikedStoryIds] = useState<Set<string>>(new Set());
-  const [likesCountMap, setLikesCountMap] = useState<Record<string, number>>({});
+  const [likesStateMap, setLikesStateMap] = useState<Record<string, { count: number; userIds: string[] }>>({});
   const [floatingHearts, setFloatingHearts] = useState<FloatingHeart[]>([]);
   const [showBigHeart, setShowBigHeart] = useState(false);
   const lastTapRef = useRef<number>(0);
@@ -45,24 +44,19 @@ export default function StoryViewer({
   const progressRef = useRef(0);
 
   const current = stories[currentIndex];
+  const effectiveUserId = currentUserId || currentUser.id || 'current_user';
 
-  // Load liked stories from localStorage & seed counts
+  // Load real likes data per story
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('gymgear_liked_stories');
-      if (raw) {
-        setLikedStoryIds(new Set(JSON.parse(raw)));
-      }
-    } catch (_) {}
-
-    // Seed likes count per story
-    const counts: Record<string, number> = {};
-    stories.forEach((s, idx) => {
-      // Deterministic seed based on id length + index
-      const baseLikes = ((s.id.charCodeAt(0) || 12) % 8) + 2;
-      counts[s.id] = baseLikes;
+    const map: Record<string, { count: number; userIds: string[] }> = {};
+    stories.forEach((s) => {
+      const likesInfo = getStoryLikes(s.id);
+      map[s.id] = {
+        count: likesInfo.count,
+        userIds: likesInfo.userIds,
+      };
     });
-    setLikesCountMap(counts);
+    setLikesStateMap(map);
   }, [stories]);
 
   // Mark current story as viewed
@@ -129,65 +123,51 @@ export default function StoryViewer({
   const spawnFloatingHearts = () => {
     const newHearts: FloatingHeart[] = Array.from({ length: 6 }).map((_, i) => ({
       id: Date.now() + i + Math.random(),
-      x: (Math.random() - 0.5) * 60, // random spread around button
+      x: (Math.random() - 0.5) * 60,
       rotation: (Math.random() - 0.5) * 45,
       scale: 0.8 + Math.random() * 0.5,
     }));
     setFloatingHearts((prev) => [...prev, ...newHearts]);
 
-    // Remove them after animation
     setTimeout(() => {
       setFloatingHearts((prev) => prev.filter((h) => !newHearts.some((nh) => nh.id === h.id)));
     }, 1200);
   };
 
-  const handleToggleLike = (forceLikeOnly = false) => {
+  const handleToggleLike = async (forceLikeOnly = false) => {
     if (!current) return;
     const storyId = current.id;
-    const isCurrentlyLiked = likedStoryIds.has(storyId);
+    const currentLikesInfo = likesStateMap[storyId] || getStoryLikes(storyId);
+    const isCurrentlyLiked = currentLikesInfo.userIds.includes(effectiveUserId);
 
     if (forceLikeOnly && isCurrentlyLiked) {
-      // Double tap when already liked: just spawn hearts animation!
+      // Double tap when already liked: just play animation
       spawnFloatingHearts();
       setShowBigHeart(true);
       setTimeout(() => setShowBigHeart(false), 800);
       return;
     }
 
-    const nextLiked = !isCurrentlyLiked;
-    setLikedStoryIds((prev) => {
-      const updated = new Set(prev);
-      if (nextLiked) updated.add(storyId);
-      else updated.delete(storyId);
-      try {
-        localStorage.setItem('gymgear_liked_stories', JSON.stringify(Array.from(updated)));
-      } catch (_) {}
-      return updated;
+    // Toggle like in persistent store (also dispatches notification to author)
+    const result = await toggleStoryLike(current, {
+      id: effectiveUserId,
+      name: currentUser?.name || 'Thành viên',
+      avatar: currentUser?.avatar || '/default-avatar.svg',
     });
 
-    setLikesCountMap((prev) => ({
+    // Update local state
+    setLikesStateMap((prev) => ({
       ...prev,
-      [storyId]: Math.max(0, (prev[storyId] || 0) + (nextLiked ? 1 : -1)),
+      [storyId]: {
+        count: result.likesCount,
+        userIds: result.userIds,
+      },
     }));
 
-    if (nextLiked) {
+    if (result.liked) {
       spawnFloatingHearts();
       setShowBigHeart(true);
       setTimeout(() => setShowBigHeart(false), 800);
-
-      // Dispatch notification to story author (if not self)
-      if (current.authorId && current.authorId !== currentUserId && current.authorId !== 'current_user') {
-        createNotification({
-          userId: current.authorId,
-          actorId: currentUserId || 'current_user',
-          actorName: currentUser?.name || 'Thành viên',
-          actorAvatar: currentUser?.avatar || '/default-avatar.svg',
-          type: 'like',
-          title: 'Thả tim Story',
-          content: `${currentUser?.name || 'Ai đó'} đã thả tim story của bạn! ❤️`,
-          targetId: current.id,
-        });
-      }
     }
   };
 
@@ -222,8 +202,9 @@ export default function StoryViewer({
   if (!current) return null;
 
   const isOwner = current.authorId === currentUserId || current.authorId === 'current_user';
-  const isLiked = likedStoryIds.has(current.id);
-  const likesCount = (likesCountMap[current.id] || 0) + (isLiked ? 1 : 0);
+  const currentLikesInfo = likesStateMap[current.id] || getStoryLikes(current.id);
+  const isLiked = currentLikesInfo.userIds.includes(effectiveUserId);
+  const likesCount = currentLikesInfo.count;
 
   return (
     <div

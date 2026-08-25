@@ -1147,9 +1147,75 @@ export interface Story {
   caption?: string;
   createdAt: string;
   expiresAt: string;
+  likes?: string[]; // Array of user IDs who liked this story (mỗi người 1 tym)
 }
 
 const LOCAL_STORIES_KEY = 'gymgear_active_stories';
+const STORY_LIKES_KEY = 'gymgear_story_likes_map';
+
+export function getStoryLikesMap(): Record<string, string[]> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(STORY_LIKES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getStoryLikes(storyId: string): { count: number; userIds: string[] } {
+  const map = getStoryLikesMap();
+  const userIds = map[storyId] || [];
+  return { count: userIds.length, userIds };
+}
+
+export async function toggleStoryLike(
+  story: Story,
+  user: { id: string; name: string; avatar?: string }
+): Promise<{ liked: boolean; likesCount: number; userIds: string[] }> {
+  const map = getStoryLikesMap();
+  const currentLikes = map[story.id] || [];
+  const isCurrentlyLiked = currentLikes.includes(user.id);
+
+  let newLikes: string[];
+  if (isCurrentlyLiked) {
+    // Bỏ thả tim
+    newLikes = currentLikes.filter((uid) => uid !== user.id);
+  } else {
+    // Thả tim (đảm bảo mỗi user chỉ có đúng 1 tim)
+    newLikes = [...currentLikes.filter((uid) => uid !== user.id), user.id];
+  }
+
+  map[story.id] = newLikes;
+  try {
+    localStorage.setItem(STORY_LIKES_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn('Không thể lưu story like vào localStorage:', e);
+  }
+
+  // Khi thả tim (không phải bỏ tym), gửi thông báo ngay cho chủ story
+  if (!isCurrentlyLiked) {
+    const targetUserId = story.authorId || story.authorAuth;
+    if (targetUserId && targetUserId !== user.id && targetUserId !== 'current_user') {
+      await createNotification({
+        userId: targetUserId,
+        actorId: user.id,
+        actorName: user.name || 'Thành viên',
+        actorAvatar: user.avatar || '/default-avatar.svg',
+        type: 'like',
+        title: 'Thả tim Story',
+        content: `${user.name || 'Ai đó'} đã thả tim story của bạn! ❤️`,
+        targetId: story.id,
+      });
+    }
+  }
+
+  return {
+    liked: !isCurrentlyLiked,
+    likesCount: newLikes.length,
+    userIds: newLikes,
+  };
+}
 
 function getLocalStories(): Story[] {
   if (typeof window === 'undefined') return [];
@@ -1158,8 +1224,14 @@ function getLocalStories(): Story[] {
     if (!raw) return [];
     const parsed: Story[] = JSON.parse(raw);
     const now = Date.now();
-    // Lọc các story chưa hết hạn (24h)
-    return parsed.filter(s => new Date(s.expiresAt).getTime() > now);
+    const likesMap = getStoryLikesMap();
+    // Lọc các story chưa hết hạn (24h) & gắn like thực tế
+    return parsed
+      .filter(s => new Date(s.expiresAt).getTime() > now)
+      .map(s => ({
+        ...s,
+        likes: likesMap[s.id] || s.likes || [],
+      }));
   } catch {
     return [];
   }
@@ -1206,6 +1278,7 @@ export async function fetchActiveStories(): Promise<Story[]> {
       }
 
       const nowTime = Date.now();
+      const likesMap = getStoryLikesMap();
       dbStories = rawData
         .filter((s: any) => !s.expires_at || new Date(s.expires_at).getTime() > nowTime)
         .map((s: any) => {
@@ -1220,6 +1293,7 @@ export async function fetchActiveStories(): Promise<Story[]> {
             caption: s.caption,
             createdAt: s.created_at || new Date().toISOString(),
             expiresAt: s.expires_at || new Date(Date.now() + 86400000).toISOString(),
+            likes: likesMap[s.id] || [],
           };
         });
     }
