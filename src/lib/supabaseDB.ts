@@ -1169,14 +1169,30 @@ const STORY_VIEWERS_KEY = 'gymgear_story_viewers_map';
 
 export async function getStoryViewers(storyId: string): Promise<StoryViewerInfo[]> {
   try {
-    // 1. Lấy danh sách viewer_id + viewed_at từ DB story_views
-    const { data: viewRows, error } = await supabase
+    let viewRows: any[] | null = null;
+
+    // 1. Thử lấy cả cột liked từ DB story_views
+    const { data: rowsWithLiked, error: errLiked } = await supabase
       .from('story_views')
-      .select('viewer_id, viewed_at')
+      .select('viewer_id, viewed_at, liked')
       .eq('story_id', storyId)
       .order('viewed_at', { ascending: false });
 
-    if (error || !viewRows || viewRows.length === 0) return [];
+    if (!errLiked && rowsWithLiked) {
+      viewRows = rowsWithLiked;
+    } else {
+      // 1b. Nếu DB chưa có cột liked, query an toàn không có liked
+      const { data: safeRows, error: safeErr } = await supabase
+        .from('story_views')
+        .select('viewer_id, viewed_at')
+        .eq('story_id', storyId)
+        .order('viewed_at', { ascending: false });
+      if (!safeErr && safeRows) {
+        viewRows = safeRows;
+      }
+    }
+
+    if (!viewRows || viewRows.length === 0) return [];
 
     // 2. Lấy thông tin profile (name, avatar, role) của từng viewer từ bảng users
     const viewerIds = viewRows.map((r: any) => r.viewer_id).filter(Boolean);
@@ -1188,13 +1204,13 @@ export async function getStoryViewers(storyId: string): Promise<StoryViewerInfo[
     const userMap: Record<string, any> = {};
     (usersData || []).forEach((u: any) => { userMap[u.id] = u; });
 
-    // 3. Ghép likes từ localStorage
+    // 3. Ghép likes từ DB hoặc localStorage fallback
     const likesMap = getStoryLikesMap();
     const likedUserIds = likesMap[storyId] || [];
 
     return viewRows.map((row: any) => {
       const user = userMap[row.viewer_id] || {};
-      const isLiked = likedUserIds.includes(row.viewer_id);
+      const isLiked = row.liked === true || likedUserIds.includes(row.viewer_id);
       return {
         userId: row.viewer_id,
         name: user.name || 'Thành viên',
@@ -1288,6 +1304,7 @@ export async function toggleStoryLike(
   const map = getStoryLikesMap();
   const currentLikes = map[story.id] || [];
   const isCurrentlyLiked = currentLikes.includes(user.id);
+  const nextLiked = !isCurrentlyLiked;
 
   let newLikes: string[];
   if (isCurrentlyLiked) {
@@ -1311,7 +1328,7 @@ export async function toggleStoryLike(
     try {
       await supabase
         .from('story_views')
-        .update({ liked: !isCurrentlyLiked })
+        .update({ liked: nextLiked })
         .eq('story_id', story.id)
         .eq('viewer_id', user.id);
     } catch (dbErr) {
@@ -1319,8 +1336,8 @@ export async function toggleStoryLike(
     }
   }
 
-  // Khi thả tim (không phải bỏ tym), gửi thông báo ngay cho chủ story
-  if (!isCurrentlyLiked) {
+  // Khi thả tim, gửi thông báo ngay cho chủ story
+  if (nextLiked) {
     const targetUserId = story.authorId || story.authorAuth;
     if (targetUserId && targetUserId !== user.id && targetUserId !== 'current_user') {
       await createNotification({
@@ -1337,7 +1354,7 @@ export async function toggleStoryLike(
   }
 
   return {
-    liked: !isCurrentlyLiked,
+    liked: nextLiked,
     likesCount: newLikes.length,
     userIds: newLikes,
   };
