@@ -1163,111 +1163,77 @@ const LOCAL_STORIES_KEY = 'gymgear_active_stories';
 const STORY_LIKES_KEY = 'gymgear_story_likes_map';
 const STORY_VIEWERS_KEY = 'gymgear_story_viewers_map';
 
-export function getStoryViewers(storyId: string): StoryViewerInfo[] {
-  if (typeof window === 'undefined') return [];
+// ── STORY VIEWERS: Supabase DB (story_views table) ──────────────────────────────
+// Bảng: story_views (id uuid, story_id uuid, viewer_id uuid, viewed_at timestamptz)
+// viewer_id FK → users.id (profile table)
+
+export async function getStoryViewers(storyId: string): Promise<StoryViewerInfo[]> {
   try {
-    const raw = localStorage.getItem(STORY_VIEWERS_KEY);
-    const map: Record<string, StoryViewerInfo[]> = raw ? JSON.parse(raw) : {};
-    let viewers = map[storyId];
+    // Lấy danh sách viewer_id + viewed_at từ DB
+    const { data: viewRows, error } = await supabase
+      .from('story_views')
+      .select('viewer_id, viewed_at')
+      .eq('story_id', storyId)
+      .order('viewed_at', { ascending: false });
 
-    if (!viewers || viewers.length === 0) {
-      // Seed realistic viewers for demo & feedback
-      const seedViewers: StoryViewerInfo[] = [
-        {
-          userId: 'user_alex',
-          name: 'Alexandre Nguyễn',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          role: 'premium',
-          viewedAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-          liked: true,
-        },
-        {
-          userId: 'user_coach',
-          name: 'HLV Minh Tuấn (PT)',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-          role: 'admin',
-          viewedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-          liked: true,
-        },
-        {
-          userId: 'user_lan',
-          name: 'Hoàng Lan (Bikini Fitness)',
-          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-          role: 'premium',
-          viewedAt: new Date(Date.now() - 1000 * 60 * 95).toISOString(),
-        },
-        {
-          userId: 'user_dung',
-          name: 'Dũng Powerlifter',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-          role: 'user',
-          viewedAt: new Date(Date.now() - 1000 * 60 * 160).toISOString(),
-        },
-      ];
-      viewers = seedViewers;
-      map[storyId] = seedViewers;
-      localStorage.setItem(STORY_VIEWERS_KEY, JSON.stringify(map));
-    }
+    if (error || !viewRows || viewRows.length === 0) return [];
 
-    // Attach real persistent like status from STORY_LIKES_KEY
+    // Lấy thông tin profile (name, avatar, role) của từng viewer
+    const viewerIds = viewRows.map((r: any) => r.viewer_id).filter(Boolean);
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, name, avatar, role')
+      .in('id', viewerIds);
+
+    const userMap: Record<string, any> = {};
+    (usersData || []).forEach((u: any) => { userMap[u.id] = u; });
+
+    // Ghép likes từ localStorage để hiển thị trái tim
     const likesMap = getStoryLikesMap();
     const likedUserIds = likesMap[storyId] || [];
 
-    return viewers.map((v) => ({
-      ...v,
-      liked: likedUserIds.includes(v.userId) || v.liked,
-    }));
-  } catch {
+    return viewRows.map((row: any) => {
+      const user = userMap[row.viewer_id] || {};
+      return {
+        userId: row.viewer_id,
+        name: user.name || 'Thành viên',
+        avatar: user.avatar || '/default-avatar.svg',
+        role: user.role || 'user',
+        viewedAt: row.viewed_at,
+        liked: likedUserIds.includes(row.viewer_id),
+      } as StoryViewerInfo;
+    });
+  } catch (err) {
+    console.warn('Lỗi getStoryViewers:', err);
     return [];
   }
 }
 
-export function recordStoryView(
+export async function recordStoryView(
   storyId: string,
   viewer: { id: string; name: string; avatar?: string; role?: string }
-): StoryViewerInfo[] {
-  if (typeof window === 'undefined' || !viewer.id) return [];
+): Promise<void> {
+  // Không ghi nếu chưa có ID hợp lệ (guest / current_user fallback)
+  if (!viewer.id || viewer.id === 'current_user') return;
+
   try {
-    const raw = localStorage.getItem(STORY_VIEWERS_KEY);
-    const map: Record<string, StoryViewerInfo[]> = raw ? JSON.parse(raw) : {};
-    const current = map[storyId] || getStoryViewers(storyId);
+    // Upsert để tránh duplicate (story_id + viewer_id unique)
+    // Nếu đã xem rồi thì cập nhật viewed_at → luôn cập nhật "vừa xem"
+    const { error } = await supabase
+      .from('story_views')
+      .upsert(
+        { story_id: storyId, viewer_id: viewer.id, viewed_at: new Date().toISOString() },
+        { onConflict: 'story_id,viewer_id', ignoreDuplicates: false }
+      );
 
-    const existingIdx = current.findIndex((v) => v.userId === viewer.id);
-    let updated: StoryViewerInfo[];
-
-    const likesMap = getStoryLikesMap();
-    const isLiked = (likesMap[storyId] || []).includes(viewer.id);
-
-    if (existingIdx >= 0) {
-      // Update existing viewer info
-      updated = [...current];
-      updated[existingIdx] = {
-        ...updated[existingIdx],
-        name: viewer.name || updated[existingIdx].name,
-        avatar: viewer.avatar || updated[existingIdx].avatar,
-        role: viewer.role || updated[existingIdx].role,
-        liked: isLiked || updated[existingIdx].liked,
-      };
-    } else {
-      // Prepend new viewer at the top
-      const newViewer: StoryViewerInfo = {
-        userId: viewer.id,
-        name: viewer.name || 'Thành viên',
-        avatar: viewer.avatar || '/default-avatar.svg',
-        role: viewer.role || 'user',
-        viewedAt: new Date().toISOString(),
-        liked: isLiked,
-      };
-      updated = [newViewer, ...current];
+    if (error) {
+      console.warn('recordStoryView DB error:', error.message);
     }
-
-    map[storyId] = updated;
-    localStorage.setItem(STORY_VIEWERS_KEY, JSON.stringify(map));
-    return updated;
-  } catch {
-    return [];
+  } catch (err) {
+    console.warn('Lỗi recordStoryView:', err);
   }
 }
+
 
 export function getStoryLikesMap(): Record<string, string[]> {
   if (typeof window === 'undefined') return {};

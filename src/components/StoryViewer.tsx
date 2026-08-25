@@ -65,12 +65,13 @@ export default function StoryViewer({
 
   // Load & record story view
   useEffect(() => {
-    if (current) {
-      onStoryViewed?.(current.id);
+    if (!current) return;
+    onStoryViewed?.(current.id);
 
-      // Record current viewer if authenticated / guest
-      if (currentUser?.id || effectiveUserId) {
-        recordStoryView(current.id, {
+    const run = async () => {
+      // Record current viewer into DB
+      if (effectiveUserId && effectiveUserId !== 'current_user') {
+        await recordStoryView(current.id, {
           id: effectiveUserId,
           name: currentUser?.name || 'Thành viên',
           avatar: currentUser?.avatar || '/default-avatar.svg',
@@ -78,10 +79,11 @@ export default function StoryViewer({
         });
       }
 
-      // Load viewers for this story
-      const viewers = getStoryViewers(current.id);
+      // Load fresh viewers list from DB
+      const viewers = await getStoryViewers(current.id);
       setViewersList(viewers);
-    }
+    };
+    run();
   }, [current?.id, effectiveUserId, currentUser, onStoryViewed]);
 
   const goNext = useCallback(() => {
@@ -374,9 +376,9 @@ export default function StoryViewer({
             {/* Viewers stack button for Story Owner */}
             {isOwner ? (
               <button
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  const fresh = getStoryViewers(current.id);
+                  const fresh = await getStoryViewers(current.id);
                   setViewersList(fresh);
                   setIsViewerListOpen(true);
                   setPaused(true);
