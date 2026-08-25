@@ -129,6 +129,25 @@ body {
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes floatUpStory {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(0.8) rotate(0deg);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translateY(-70px) scale(1.25) rotate(var(--rot, 15deg));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-150px) scale(1.4) rotate(var(--rot, -20deg));
+  }
+}
+
+.animate-floatUpStory {
+  animation: floatUpStory 1.1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;

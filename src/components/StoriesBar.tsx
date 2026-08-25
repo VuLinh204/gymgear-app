@@ -47,6 +47,30 @@ export default function StoriesBar() {
     fileRef.current?.click();
   };
 
+  // Trạng thái các story đã xem (Instagram-style viewed stories)
+  const [viewedStoryIds, setViewedStoryIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('gymgear_viewed_stories');
+      if (raw) {
+        setViewedStoryIds(new Set(JSON.parse(raw)));
+      }
+    } catch (_) {}
+  }, []);
+
+  const markStoryViewed = (storyId: string) => {
+    setViewedStoryIds((prev) => {
+      if (prev.has(storyId)) return prev;
+      const next = new Set(prev);
+      next.add(storyId);
+      try {
+        localStorage.setItem('gymgear_viewed_stories', JSON.stringify(Array.from(next)));
+      } catch (_) {}
+      return next;
+    });
+  };
+
   // Gom nhóm story theo từng tác giả (mỗi tác giả hiển thị 1 avatar ngoài thanh cuộn)
   const isMyStory = (s: Story) => {
     if (currentUser?.id && (s.authorId === currentUser.id || s.authorAuth === currentUser.id)) return true;
@@ -63,6 +87,19 @@ export default function StoriesBar() {
   const uniqueStories = Array.from(authorMap.values());
   const myStory = uniqueStories.find(isMyStory);
 
+  // Kiểm tra xem tất cả story của 1 tác giả đã được xem chưa
+  const isAuthorViewed = (targetStory: Story) => {
+    const authorAllStories = stories.filter((s) => {
+      if (s.id === targetStory.id) return true;
+      if (targetStory.authorId && s.authorId === targetStory.authorId) return true;
+      if (targetStory.authorAuth && s.authorAuth === targetStory.authorAuth) return true;
+      if (targetStory.authorName && s.authorName === targetStory.authorName && s.authorName !== 'Ẩn danh') return true;
+      return false;
+    });
+    if (authorAllStories.length === 0) return false;
+    return authorAllStories.every((s) => viewedStoryIds.has(s.id));
+  };
+
   // Trạng thái xem story theo từng tác giả cụ thể
   const [viewingStories, setViewingStories] = useState<Story[] | null>(null);
 
@@ -70,6 +107,7 @@ export default function StoriesBar() {
   const handleViewMyStories = () => {
     const myAllStories = stories.filter(isMyStory);
     if (myAllStories.length > 0) {
+      myAllStories.forEach((s) => markStoryViewed(s.id));
       setViewingStories(myAllStories);
     } else {
       handleOpenAddStory();
@@ -85,21 +123,25 @@ export default function StoriesBar() {
       if (targetStory.authorName && s.authorName === targetStory.authorName && s.authorName !== 'Ẩn danh') return true;
       return false;
     });
-    setViewingStories(authorAllStories.length > 0 ? authorAllStories : [targetStory]);
+    const toView = authorAllStories.length > 0 ? authorAllStories : [targetStory];
+    toView.forEach((s) => markStoryViewed(s.id));
+    setViewingStories(toView);
   };
 
   if (loading && stories.length === 0) return null; // Tránh layout shift khi đang tải
 
   return (
     <>
-      <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide py-2 px-1">
+      <div className="flex items-center gap-3.5 overflow-x-auto scrollbar-hide py-2 px-1">
         {/* Nút Tạo / Xem Story của bạn */}
         <div className="flex flex-col items-center gap-1.5 shrink-0 group">
           <div
             onClick={handleViewMyStories}
             className={`relative w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 ${
               myStory
-                ? 'p-0.5 bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 hover:scale-105 shadow-lg shadow-orange-500/20'
+                ? myStory && isAuthorViewed(myStory)
+                  ? 'p-0.5 bg-slate-700/80 border border-slate-600/40 opacity-80 hover:opacity-100 hover:scale-105'
+                  : 'p-0.5 bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 hover:scale-105 shadow-lg shadow-orange-500/20'
                 : 'border-2 border-dashed border-slate-700 bg-slate-900/80 hover:border-amber-500 hover:bg-slate-800'
             }`}
           >
@@ -152,26 +194,42 @@ export default function StoriesBar() {
           /* Danh sách Stories của các thành viên khác */
           uniqueStories
             .filter((s) => !isMyStory(s))
-            .map((story) => (
-              <button
-                key={story.id}
-                onClick={() => handleViewAuthorStories(story)}
-                className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none"
-              >
-                <div className="w-16 h-16 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 hover:scale-105 transition-transform shadow-lg shadow-orange-500/20">
-                  <div className="w-full h-full rounded-full border-2 border-slate-950 overflow-hidden">
-                    <img
-                      src={story.authorAvatar}
-                      alt={story.authorName}
-                      className="w-full h-full object-cover"
-                    />
+            .map((story) => {
+              const viewed = isAuthorViewed(story);
+              return (
+                <button
+                  key={story.id}
+                  onClick={() => handleViewAuthorStories(story)}
+                  className="flex flex-col items-center gap-1.5 shrink-0 group focus:outline-none cursor-pointer"
+                  title={`${story.authorName} (${viewed ? 'Đã xem' : 'Chưa xem'})`}
+                >
+                  <div
+                    className={`w-16 h-16 rounded-full p-0.5 transition-all duration-300 ${
+                      viewed
+                        ? 'bg-slate-700/60 border border-slate-600/50 opacity-75 hover:opacity-100 hover:scale-105'
+                        : 'bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 hover:scale-105 shadow-lg shadow-orange-500/20'
+                    }`}
+                  >
+                    <div className="w-full h-full rounded-full border-2 border-slate-950 overflow-hidden">
+                      <img
+                        src={story.authorAvatar || '/default-avatar.svg'}
+                        alt={story.authorName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
-                </div>
-                <span className="text-[11px] font-medium text-slate-300 group-hover:text-white transition-colors w-16 text-center truncate">
-                  {story.authorName}
-                </span>
-              </button>
-            ))
+                  <span
+                    className={`text-[11px] font-medium transition-colors w-16 text-center truncate ${
+                      viewed
+                        ? 'text-slate-400 group-hover:text-slate-200'
+                        : 'text-slate-200 font-semibold group-hover:text-amber-400'
+                    }`}
+                  >
+                    {story.authorName}
+                  </span>
+                </button>
+              );
+            })
         )}
       </div>
 
@@ -199,13 +257,14 @@ export default function StoriesBar() {
         />
       )}
 
-      {/* Bộ xem Story (Story Viewer - chỉ hiển thị story của tác giả đang xem) */}
+      {/* Bộ xem Story (Story Viewer) */}
       {viewingStories !== null && viewingStories.length > 0 && (
         <StoryViewer
           stories={viewingStories}
           initialIndex={0}
           currentUserId={currentUser.id}
           onClose={() => setViewingStories(null)}
+          onStoryViewed={markStoryViewed}
           onDelete={async (id) => {
             const { deleteStory } = await import('@/lib/supabaseDB');
             await deleteStory(id);
