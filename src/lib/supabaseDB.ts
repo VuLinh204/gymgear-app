@@ -1169,16 +1169,16 @@ const STORY_VIEWERS_KEY = 'gymgear_story_viewers_map';
 
 export async function getStoryViewers(storyId: string): Promise<StoryViewerInfo[]> {
   try {
-    // Lấy danh sách viewer_id + viewed_at + liked từ DB
+    // 1. Lấy danh sách viewer_id + viewed_at từ DB story_views
     const { data: viewRows, error } = await supabase
       .from('story_views')
-      .select('viewer_id, viewed_at, liked')
+      .select('viewer_id, viewed_at')
       .eq('story_id', storyId)
       .order('viewed_at', { ascending: false });
 
     if (error || !viewRows || viewRows.length === 0) return [];
 
-    // Lấy thông tin profile (name, avatar, role) của từng viewer
+    // 2. Lấy thông tin profile (name, avatar, role) của từng viewer từ bảng users
     const viewerIds = viewRows.map((r: any) => r.viewer_id).filter(Boolean);
     const { data: usersData } = await supabase
       .from('users')
@@ -1188,13 +1188,13 @@ export async function getStoryViewers(storyId: string): Promise<StoryViewerInfo[
     const userMap: Record<string, any> = {};
     (usersData || []).forEach((u: any) => { userMap[u.id] = u; });
 
-    // Ghép likes từ localStorage fallback
+    // 3. Ghép likes từ localStorage
     const likesMap = getStoryLikesMap();
     const likedUserIds = likesMap[storyId] || [];
 
     return viewRows.map((row: any) => {
       const user = userMap[row.viewer_id] || {};
-      const isLiked = row.liked === true || likedUserIds.includes(row.viewer_id);
+      const isLiked = likedUserIds.includes(row.viewer_id);
       return {
         userId: row.viewer_id,
         name: user.name || 'Thành viên',
@@ -1229,7 +1229,7 @@ export async function recordStoryView(
     // 1. Kiểm tra xem đã xem chưa
     const { data: existing, error: selectError } = await supabase
       .from('story_views')
-      .select('id, liked')
+      .select('id')
       .eq('story_id', storyId)
       .eq('viewer_id', viewer.id)
       .maybeSingle();
