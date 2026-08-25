@@ -1588,7 +1588,14 @@ function saveLocalNotifs(notifs: AppNotification[]) {
 export async function fetchNotifications(userId?: string): Promise<AppNotification[]> {
   // Bảng notifications chưa được tạo trong DB → dùng localStorage với sample + real notifications
   const local = getLocalNotifs();
-  return local.sort(
+  
+  // Filter cho đúng người nhận (userId = 'current_user' là broadcast/system chung)
+  const filtered = local.filter(n => {
+    if (!userId) return true;
+    return n.userId === userId || n.userId === 'current_user';
+  });
+
+  return filtered.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }

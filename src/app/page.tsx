@@ -206,7 +206,7 @@ function AppLayout() {
 
           {/* Left sidebar — lg: col-4, xl: col-3 */}
           <div className="hidden lg:block lg:col-span-4 xl:col-span-3 self-stretch">
-            <div className="sticky top-20">
+            <div className="sticky top-20 h-[calc(100vh-5.5rem)] overflow-y-auto sidebar-scroll pb-10">
               <SocialSidebarLeft
                 activeCategory={activeCategory}
                 onSelectCategory={setActiveCategory}
@@ -317,12 +317,14 @@ function AppLayout() {
             )}
           </div>
 
-          {/* Right sidebar — xl only: col-3, sticky with own scroll */}
-          <div className="hidden xl:block xl:col-span-3 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden sidebar-scroll">
-            <SocialSidebarRight
-              onViewEquipment={setSelectedEquipment}
-              onOpenBooking={handleOpenBooking}
-            />
+          {/* Right sidebar — xl only */}
+          <div className="hidden xl:block xl:col-span-3 self-stretch">
+            <div className="sticky top-20 h-[calc(100vh-5.5rem)] overflow-y-auto sidebar-scroll pb-10">
+              <SocialSidebarRight
+                onViewEquipment={handleOpenBooking}
+                onOpenBooking={() => handleOpenBooking(null)}
+              />
+            </div>
           </div>
 
         </div>

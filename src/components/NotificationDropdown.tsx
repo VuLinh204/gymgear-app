@@ -21,6 +21,8 @@ import {
   markAllNotificationsAsRead 
 } from '@/lib/supabaseDB';
 
+import { useAuth } from '@/context/AuthContext';
+
 interface NotificationDropdownProps {
   onOpenBooking?: (equipmentId?: string) => void;
   onOpenPost?: (postId: string) => void;
@@ -32,10 +34,12 @@ export default function NotificationDropdown({ onOpenBooking, onOpenPost }: Noti
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'social' | 'booking'>('all');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const { currentUser } = useAuth();
 
   const loadNotifs = async () => {
     try {
-      const data = await fetchNotifications();
+      const data = await fetchNotifications(currentUser.id);
       setNotifications(data);
     } catch (_) {}
     setLoading(false);
