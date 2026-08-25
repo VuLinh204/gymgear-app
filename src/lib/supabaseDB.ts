@@ -1169,10 +1169,10 @@ const STORY_VIEWERS_KEY = 'gymgear_story_viewers_map';
 
 export async function getStoryViewers(storyId: string): Promise<StoryViewerInfo[]> {
   try {
-    // Lấy danh sách viewer_id + viewed_at từ DB
+    // Lấy danh sách viewer_id + viewed_at + liked từ DB
     const { data: viewRows, error } = await supabase
       .from('story_views')
-      .select('viewer_id, viewed_at')
+      .select('viewer_id, viewed_at, liked')
       .eq('story_id', storyId)
       .order('viewed_at', { ascending: false });
 
@@ -1188,19 +1188,20 @@ export async function getStoryViewers(storyId: string): Promise<StoryViewerInfo[
     const userMap: Record<string, any> = {};
     (usersData || []).forEach((u: any) => { userMap[u.id] = u; });
 
-    // Ghép likes từ localStorage để hiển thị trái tim
+    // Ghép likes từ localStorage fallback
     const likesMap = getStoryLikesMap();
     const likedUserIds = likesMap[storyId] || [];
 
     return viewRows.map((row: any) => {
       const user = userMap[row.viewer_id] || {};
+      const isLiked = row.liked === true || likedUserIds.includes(row.viewer_id);
       return {
         userId: row.viewer_id,
         name: user.name || 'Thành viên',
         avatar: user.avatar || '/default-avatar.svg',
         role: user.role || 'user',
         viewedAt: row.viewed_at,
-        liked: likedUserIds.includes(row.viewer_id),
+        liked: isLiked,
       } as StoryViewerInfo;
     });
   } catch (err) {
@@ -1228,7 +1229,7 @@ export async function recordStoryView(
     // 1. Kiểm tra xem đã xem chưa
     const { data: existing, error: selectError } = await supabase
       .from('story_views')
-      .select('id')
+      .select('id, liked')
       .eq('story_id', storyId)
       .eq('viewer_id', viewer.id)
       .maybeSingle();
@@ -1263,8 +1264,6 @@ export async function recordStoryView(
     console.warn('Lỗi recordStoryView:', err);
   }
 }
-
-
 
 export function getStoryLikesMap(): Record<string, string[]> {
   if (typeof window === 'undefined') return {};
@@ -1304,6 +1303,20 @@ export async function toggleStoryLike(
     localStorage.setItem(STORY_LIKES_KEY, JSON.stringify(map));
   } catch (e) {
     console.warn('Không thể lưu story like vào localStorage:', e);
+  }
+
+  // Cập nhật trạng thái liked vào bảng story_views trong Supabase
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(story.id) && uuidRegex.test(user.id)) {
+    try {
+      await supabase
+        .from('story_views')
+        .update({ liked: !isCurrentlyLiked })
+        .eq('story_id', story.id)
+        .eq('viewer_id', user.id);
+    } catch (dbErr) {
+      console.warn('Lỗi khi update liked vào story_views:', dbErr);
+    }
   }
 
   // Khi thả tim (không phải bỏ tym), gửi thông báo ngay cho chủ story

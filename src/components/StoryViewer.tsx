@@ -192,6 +192,9 @@ export default function StoryViewer({
       },
     }));
 
+    const freshViewers = await getStoryViewers(storyId);
+    setViewersList(freshViewers);
+
     if (result.liked) {
       spawnFloatingHearts();
       setShowBigHeart(true);
@@ -388,7 +391,7 @@ export default function StoryViewer({
               >
                 {/* Mini Overlapping Avatar Stack */}
                 <div className="flex -space-x-2 overflow-hidden items-center">
-                  {viewersList.slice(0, 3).map((v, i) => (
+                  {viewersList.filter(v => v.userId !== effectiveUserId).slice(0, 3).map((v, i) => (
                     <img
                       key={v.userId || i}
                       src={v.avatar || '/default-avatar.svg'}
@@ -399,7 +402,7 @@ export default function StoryViewer({
                 </div>
                 <div className="flex items-center gap-1 text-xs text-white group-hover:text-amber-400 font-semibold">
                   <Eye className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="font-mono font-bold">{viewersList.length}</span>
+                  <span className="font-mono font-bold">{viewersList.filter(v => v.userId !== effectiveUserId).length}</span>
                   <span className="hidden sm:inline text-[10px] text-white/70">người xem</span>
                 </div>
               </button>
@@ -466,7 +469,7 @@ export default function StoryViewer({
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-amber-400" />
                 <h3 className="text-sm font-bold text-white">
-                  Người đã xem Story ({viewersList.length})
+                  Người đã xem Story ({viewersList.filter(v => v.userId !== effectiveUserId).length})
                 </h3>
               </div>
               <button
@@ -488,8 +491,8 @@ export default function StoryViewer({
 
             {/* Viewers Scrollable List */}
             <div className="flex-1 overflow-y-auto divide-y divide-slate-800/50 p-2 sidebar-scroll">
-              {viewersList.length > 0 ? (
-                viewersList.map((viewer) => {
+              {viewersList.filter(v => v.userId !== effectiveUserId).length > 0 ? (
+                viewersList.filter(v => v.userId !== effectiveUserId).map((viewer) => {
                   const hasLiked = currentLikesInfo.userIds.includes(viewer.userId) || viewer.liked;
                   return (
                     <div
