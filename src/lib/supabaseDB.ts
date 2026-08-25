@@ -1168,43 +1168,55 @@ export function getStoryViewers(storyId: string): StoryViewerInfo[] {
   try {
     const raw = localStorage.getItem(STORY_VIEWERS_KEY);
     const map: Record<string, StoryViewerInfo[]> = raw ? JSON.parse(raw) : {};
-    const viewers = map[storyId];
-    if (viewers && viewers.length > 0) return viewers;
+    let viewers = map[storyId];
 
-    // Seed realistic viewers for demo & feedback
-    const seedViewers: StoryViewerInfo[] = [
-      {
-        userId: 'user_alex',
-        name: 'Alexandre Nguyễn',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        role: 'premium',
-        viewedAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-        liked: true,
-      },
-      {
-        userId: 'user_coach',
-        name: 'HLV Minh Tuấn (PT)',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        role: 'admin',
-        viewedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-        liked: true,
-      },
-      {
-        userId: 'user_lan',
-        name: 'Hoàng Lan (Bikini Fitness)',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-        role: 'premium',
-        viewedAt: new Date(Date.now() - 1000 * 60 * 95).toISOString(),
-      },
-      {
-        userId: 'user_dung',
-        name: 'Dũng Powerlifter',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-        role: 'user',
-        viewedAt: new Date(Date.now() - 1000 * 60 * 160).toISOString(),
-      },
-    ];
-    return seedViewers;
+    if (!viewers || viewers.length === 0) {
+      // Seed realistic viewers for demo & feedback
+      const seedViewers: StoryViewerInfo[] = [
+        {
+          userId: 'user_alex',
+          name: 'Alexandre Nguyễn',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          role: 'premium',
+          viewedAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+          liked: true,
+        },
+        {
+          userId: 'user_coach',
+          name: 'HLV Minh Tuấn (PT)',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+          role: 'admin',
+          viewedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+          liked: true,
+        },
+        {
+          userId: 'user_lan',
+          name: 'Hoàng Lan (Bikini Fitness)',
+          avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+          role: 'premium',
+          viewedAt: new Date(Date.now() - 1000 * 60 * 95).toISOString(),
+        },
+        {
+          userId: 'user_dung',
+          name: 'Dũng Powerlifter',
+          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+          role: 'user',
+          viewedAt: new Date(Date.now() - 1000 * 60 * 160).toISOString(),
+        },
+      ];
+      viewers = seedViewers;
+      map[storyId] = seedViewers;
+      localStorage.setItem(STORY_VIEWERS_KEY, JSON.stringify(map));
+    }
+
+    // Attach real persistent like status from STORY_LIKES_KEY
+    const likesMap = getStoryLikesMap();
+    const likedUserIds = likesMap[storyId] || [];
+
+    return viewers.map((v) => ({
+      ...v,
+      liked: likedUserIds.includes(v.userId) || v.liked,
+    }));
   } catch {
     return [];
   }
@@ -1220,21 +1232,38 @@ export function recordStoryView(
     const map: Record<string, StoryViewerInfo[]> = raw ? JSON.parse(raw) : {};
     const current = map[storyId] || getStoryViewers(storyId);
 
-    const exists = current.some((v) => v.userId === viewer.id);
-    if (!exists) {
+    const existingIdx = current.findIndex((v) => v.userId === viewer.id);
+    let updated: StoryViewerInfo[];
+
+    const likesMap = getStoryLikesMap();
+    const isLiked = (likesMap[storyId] || []).includes(viewer.id);
+
+    if (existingIdx >= 0) {
+      // Update existing viewer info
+      updated = [...current];
+      updated[existingIdx] = {
+        ...updated[existingIdx],
+        name: viewer.name || updated[existingIdx].name,
+        avatar: viewer.avatar || updated[existingIdx].avatar,
+        role: viewer.role || updated[existingIdx].role,
+        liked: isLiked || updated[existingIdx].liked,
+      };
+    } else {
+      // Prepend new viewer at the top
       const newViewer: StoryViewerInfo = {
         userId: viewer.id,
         name: viewer.name || 'Thành viên',
         avatar: viewer.avatar || '/default-avatar.svg',
         role: viewer.role || 'user',
         viewedAt: new Date().toISOString(),
+        liked: isLiked,
       };
-      const updated = [newViewer, ...current];
-      map[storyId] = updated;
-      localStorage.setItem(STORY_VIEWERS_KEY, JSON.stringify(map));
-      return updated;
+      updated = [newViewer, ...current];
     }
-    return current;
+
+    map[storyId] = updated;
+    localStorage.setItem(STORY_VIEWERS_KEY, JSON.stringify(map));
+    return updated;
   } catch {
     return [];
   }

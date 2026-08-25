@@ -376,6 +376,8 @@ export default function StoryViewer({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  const fresh = getStoryViewers(current.id);
+                  setViewersList(fresh);
                   setIsViewerListOpen(true);
                   setPaused(true);
                 }}
