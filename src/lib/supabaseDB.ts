@@ -1215,24 +1215,55 @@ export async function recordStoryView(
 ): Promise<void> {
   // Không ghi nếu chưa có ID hợp lệ (guest / current_user fallback)
   if (!viewer.id || viewer.id === 'current_user') return;
+  // Kiểm tra UUID hợp lệ
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(storyId) || !uuidRegex.test(viewer.id)) {
+    console.warn('recordStoryView: storyId hoặc viewer.id không phải UUID hợp lệ', { storyId, viewerId: viewer.id });
+    return;
+  }
 
   try {
-    // Upsert để tránh duplicate (story_id + viewer_id unique)
-    // Nếu đã xem rồi thì cập nhật viewed_at → luôn cập nhật "vừa xem"
-    const { error } = await supabase
-      .from('story_views')
-      .upsert(
-        { story_id: storyId, viewer_id: viewer.id, viewed_at: new Date().toISOString() },
-        { onConflict: 'story_id,viewer_id', ignoreDuplicates: false }
-      );
+    const viewedAt = new Date().toISOString();
 
-    if (error) {
-      console.warn('recordStoryView DB error:', error.message);
+    // 1. Kiểm tra xem đã xem chưa
+    const { data: existing, error: selectError } = await supabase
+      .from('story_views')
+      .select('id')
+      .eq('story_id', storyId)
+      .eq('viewer_id', viewer.id)
+      .maybeSingle();
+
+    if (selectError) {
+      console.warn('recordStoryView SELECT error:', selectError.code, selectError.message);
+      return;
+    }
+
+    if (existing) {
+      // 2a. Đã xem → update viewed_at
+      const { error: updateError } = await supabase
+        .from('story_views')
+        .update({ viewed_at: viewedAt })
+        .eq('story_id', storyId)
+        .eq('viewer_id', viewer.id);
+
+      if (updateError) {
+        console.warn('recordStoryView UPDATE error:', updateError.code, updateError.message);
+      }
+    } else {
+      // 2b. Chưa xem → insert mới
+      const { error: insertError } = await supabase
+        .from('story_views')
+        .insert({ story_id: storyId, viewer_id: viewer.id, viewed_at: viewedAt });
+
+      if (insertError) {
+        console.warn('recordStoryView INSERT error:', insertError.code, insertError.message, '| Hint:', insertError.hint);
+      }
     }
   } catch (err) {
     console.warn('Lỗi recordStoryView:', err);
   }
 }
+
 
 
 export function getStoryLikesMap(): Record<string, string[]> {
