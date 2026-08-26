@@ -493,7 +493,7 @@ function AppLayout() {
       {/* Direct Gym Chat Widget */}
       <ChatWidget
         onOpenEquipmentDetail={(id) => {
-          const eq = MOCK_EQUIPMENTS.find(e => e.id === id);
+          const eq = MOCK_EQUIPMENTS.find((e: Equipment) => e.id === id);
           if (eq) setSelectedEquipment(eq);
         }}
       />

@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
 import { SocialPost, BookingRequest, UserAuthor, UserRole, PostComment } from '@/types';
-import { MOCK_POSTS } from '@/data/mockData';
 
 async function getCurrentAuthId(): Promise<string | undefined> {
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -24,7 +23,7 @@ export async function fetchPosts(currentUserId?: string) {
 
   if (postsRes.error) {
     console.error("Error fetching posts:", postsRes.error);
-    return MOCK_POSTS;
+    return [];
   }
 
   const equipments = equipRes.data || [];

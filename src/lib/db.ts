@@ -1,5 +1,5 @@
 import { Equipment, SocialPost, BookingRequest, UserAuthor, UserRole } from '@/types';
-import { MOCK_EQUIPMENTS, MOCK_POSTS, MOCK_REVIEWS } from '@/data/mockData';
+import { MOCK_EQUIPMENTS, MOCK_REVIEWS } from '@/data/mockData';
 
 // Key storage names cho Real Data Persistence
 const STORAGE_KEYS = {
@@ -82,7 +82,7 @@ const initDatabase = () => {
     localStorage.setItem(STORAGE_KEYS.EQUIPMENTS, JSON.stringify(MOCK_EQUIPMENTS));
   }
   if (!localStorage.getItem(STORAGE_KEYS.POSTS)) {
-    localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(MOCK_POSTS));
+    localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify([]));
   }
   if (!localStorage.getItem(STORAGE_KEYS.BOOKINGS)) {
     localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(SEED_BOOKINGS));
@@ -103,9 +103,9 @@ export const getDBEquipments = (): Equipment[] => {
 
 export const getDBPosts = (): SocialPost[] => {
   initDatabase();
-  if (typeof window === 'undefined') return MOCK_POSTS;
+  if (typeof window === 'undefined') return [];
   const data = localStorage.getItem(STORAGE_KEYS.POSTS);
-  return data ? JSON.parse(data) : MOCK_POSTS;
+  return data ? JSON.parse(data) : [];
 };
 
 export const saveDBPost = (post: SocialPost): SocialPost[] => {
