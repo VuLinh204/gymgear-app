@@ -6,7 +6,7 @@ import { SocialPost, Equipment, PostComment } from '@/types';
 import {
   Star, Heart, MessageSquare, Share2, Bookmark,
   CalendarCheck, Crown, ShieldCheck, UserCheck, Send, LogIn, Loader2, Pin, Trash2, Pencil, RotateCcw, X,
-  CornerDownRight, ChevronDown, ChevronUp, Reply
+  CornerDownRight, ChevronDown, ChevronUp, Reply, Repeat2
 } from 'lucide-react';
 import {
   toggleLike, addComment, fetchCommentsByPost, deletePost, hardDeletePost,
@@ -14,6 +14,7 @@ import {
 } from '@/lib/supabaseDB';
 import Link from 'next/link';
 import AuthorPreview from './AuthorPreview';
+import ShareModal from './ShareModal';
 
 interface PostCardProps {
   post: SocialPost;
@@ -514,6 +515,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [bookmarked, setBookmarked] = useState(post.isBookmarked || false);
   const [sharesCount, setSharesCount] = useState(post.sharesCount || 0);
   const [reposted, setReposted] = useState(post.isReposted || false);
+  const [repostLoading, setRepostLoading] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -525,7 +528,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     setBookmarked(Boolean(post.isBookmarked));
     setSharesCount(post.sharesCount || 0);
     setReposted(Boolean(post.isReposted));
-  }, [post.id, post.isLiked, post.likesCount, post.comments, post.commentsCount, post.isBookmarked]);
+  }, [post.id, post.isLiked, post.likesCount, post.comments, post.commentsCount, post.isBookmarked, post.isReposted, post.sharesCount]);
 
   const handleToggleLike = async () => {
     if (inTrash) return;
@@ -666,35 +669,49 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const handleShare = () => {
-    // Toggle repost via API
-    (async () => {
-      if (isGuest) { requestAuth('login'); return; }
-      try {
-        const res = await fetch('/api/repost', { method: 'POST', body: JSON.stringify({ postId: post.id }), headers: { 'Content-Type': 'application/json' } });
-        const j = await res.json();
-        if (j && typeof j.reposted !== 'undefined') {
-          setReposted(Boolean(j.reposted));
-          setSharesCount(j.count || (sharesCount + (j.reposted ? 1 : -1)));
-        } else {
-          // fallback to copy link
-          if (navigator.share) {
-            navigator.share({ title: `Bài viết của ${post.author.name}`, text: post.content, url: window.location.href });
-          } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert('Đã sao chép link!');
-          }
-        }
-      } catch (e) {
-        console.error(e);
-        if (navigator.share) {
-          navigator.share({ title: `Bài viết của ${post.author.name}`, text: post.content, url: window.location.href });
-        } else {
-          navigator.clipboard.writeText(window.location.href);
-          alert('Đã sao chép link!');
-        }
+  const handleRepost = async () => {
+    if (inTrash) return;
+    if (isGuest) { requestAuth('login'); return; }
+    if (repostLoading) return;
+    const wasReposted = reposted;
+    const prevCount = sharesCount;
+    setReposted(!wasReposted);
+    setSharesCount(wasReposted ? Math.max(0, prevCount - 1) : prevCount + 1);
+    setRepostLoading(true);
+    try {
+      const res = await fetch('/api/repost', { 
+        method: 'POST', 
+        body: JSON.stringify({ postId: post.id }), 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+      const j = await res.json();
+      if (j && typeof j.reposted !== 'undefined') {
+        setReposted(Boolean(j.reposted));
+        setSharesCount(j.count !== undefined ? j.count : (wasReposted ? Math.max(0, prevCount - 1) : prevCount + 1));
       }
-    })();
+      if (!wasReposted && currentUser.id !== post.author.id) {
+        createNotification({
+          userId: post.author.id,
+          actorId: currentUser.id,
+          actorName: currentUser.name || 'Một gymer',
+          actorAvatar: currentUser.avatar,
+          type: 'system',
+          title: 'Đăng lại bài viết 🔄',
+          content: `${currentUser.name || 'Một gymer'} đã đăng lại bài viết của bạn.`,
+          targetId: post.id,
+        });
+      }
+    } catch {
+      setReposted(wasReposted);
+      setSharesCount(prevCount);
+    } finally {
+      setRepostLoading(false);
+    }
+  };
+
+  const handleShare = () => {
+    if (inTrash) return;
+    setShareModalOpen(true);
   };
 
   const isOwner = currentUser && currentUser.id === post.author.id;
@@ -841,38 +858,71 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         ) : (
           <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-            <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-hidden">
+              {/* Thích */}
               <button
                 onClick={handleToggleLike}
                 disabled={likeLoading}
-                className={`flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${liked ? 'text-rose-500 font-bold' : 'hover:text-rose-400'} disabled:opacity-70`}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
+                  liked 
+                    ? 'text-rose-500 font-bold bg-rose-500/10 border border-rose-500/20' 
+                    : 'hover:text-rose-400 hover:bg-slate-800/80'
+                } disabled:opacity-70`}
+                title={liked ? 'Bỏ thích' : 'Thích bài viết'}
               >
                 {likeLoading
                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   : <Heart className={`w-3.5 h-3.5 ${liked ? 'fill-rose-500' : ''}`} />}
-                <span className="text-[11px] sm:text-xs">{likesCount}</span>
+                <span className="text-[11px] sm:text-xs font-semibold">{likesCount}</span>
               </button>
 
+              {/* Bình luận */}
               <button
                 onClick={handleToggleComments}
-                className="flex items-center gap-1 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:text-amber-400 hover:bg-slate-800/80 transition-all cursor-pointer shrink-0"
+                title="Bình luận"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-amber-400/80" />
-                <span className="text-[11px] sm:text-xs">{commentsCount}</span>
+                <span className="text-[11px] sm:text-xs font-semibold">{commentsCount}</span>
               </button>
 
+              {/* Đăng lại (Repost) */}
+              <button
+                onClick={handleRepost}
+                disabled={repostLoading}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
+                  reposted 
+                    ? 'text-emerald-400 font-bold bg-emerald-500/15 border border-emerald-500/30' 
+                    : 'hover:text-emerald-400 hover:bg-slate-800/80'
+                }`}
+                title={reposted ? 'Đã đăng lại (Bấm để huỷ)' : 'Đăng lại bài viết'}
+              >
+                {repostLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                ) : (
+                  <RotateCcw className={`w-3.5 h-3.5 ${reposted ? 'text-emerald-400 stroke-[2.5]' : 'text-slate-400'}`} />
+                )}
+                <span className="text-[11px] sm:text-xs font-semibold">{sharesCount || 0}</span>
+              </button>
+
+              {/* Chia sẻ (Share) */}
               <button
                 onClick={handleShare}
-                className="flex items-center gap-1 hover:text-blue-400 transition-colors cursor-pointer shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all cursor-pointer shrink-0"
+                title="Chia sẻ bài viết"
               >
                 <Share2 className="w-3.5 h-3.5 text-blue-400/80" />
-                <span className="text-[11px] sm:text-xs">{sharesCount || 0}</span>
+                <span className="hidden sm:inline text-[11px] font-semibold">Chia sẻ</span>
               </button>
             </div>
 
             <button
               onClick={handleBookmark}
-              className={`p-1 rounded-lg transition-colors cursor-pointer shrink-0 ${bookmarked ? 'text-amber-400 bg-amber-500/10' : 'hover:text-amber-400'}`}
+              className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
+                bookmarked 
+                  ? 'text-amber-400 bg-amber-500/15 border border-amber-500/30' 
+                  : 'hover:text-amber-400 hover:bg-slate-800/80'
+              }`}
               title={bookmarked ? 'Bỏ lưu' : 'Lưu bài viết'}
             >
               <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-amber-400' : ''}`} />
@@ -903,6 +953,14 @@ export const PostCard: React.FC<PostCardProps> = ({
           requestAuth={requestAuth}
           onViewEquipment={onViewEquipment}
           onBookEquipment={onBookEquipment}
+        />
+      )}
+
+      {/* ── Share Popup Modal ─────────────────────────────────────────────── */}
+      {shareModalOpen && !inTrash && (
+        <ShareModal
+          post={post}
+          onClose={() => setShareModalOpen(false)}
         />
       )}
     </>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
@@ -14,9 +14,9 @@ import { AdminDashboardModal } from '@/components/AdminDashboardModal';
 import { AuthModal } from '@/components/AuthModal';
 import { Footer } from '@/components/Footer';
 import { EditPostModal } from '@/components/EditPostModal';
-import { fetchPosts, createPost } from '@/lib/supabaseDB';
+import { fetchPosts, createPost, getFollowingUserIds } from '@/lib/supabaseDB';
 import { SocialPost, Equipment, CategoryType } from '@/types';
-import { Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles, Loader2, Users, UserPlus } from 'lucide-react';
 import StoriesBar from '@/components/StoriesBar';
 import ChatWidget from '@/components/ChatWidget';
 import EquipmentCompareModal from '@/components/EquipmentCompareModal';
@@ -40,6 +40,14 @@ function AppLayout() {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Infinite Scroll state
+  const [visibleCount, setVisibleCount] = useState(6);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Following user IDs
+  const [followingUserIds, setFollowingUserIds] = useState<Set<string>>(new Set());
+
   // Modals
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
@@ -51,19 +59,23 @@ function AppLayout() {
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
 
-  // 1. Tải bài viết
+  // 1. Tải bài viết & danh sách đang theo dõi
   useEffect(() => {
-    const loadPosts = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
         const userId = currentUser.role !== 'guest' ? currentUser.id : undefined;
-        const data = await fetchPosts(userId);
-        setPosts(data);
+        const [postsData, followIds] = await Promise.all([
+          fetchPosts(userId),
+          getFollowingUserIds(userId),
+        ]);
+        setPosts(postsData);
+        setFollowingUserIds(followIds);
       } finally {
         setLoading(false);
       }
     };
-    loadPosts();
+    loadData();
   }, [currentUser.id]);
 
   // 2. Lắng nghe phím tắt toàn năng (Global Shortcuts)
@@ -134,6 +146,7 @@ function AppLayout() {
       if (feedSort === 'trending' && post.likesCount < 50) return false;
       if (feedSort === 'verified' && !post.author.isVerified) return false;
       if (feedSort === 'tagged' && !post.taggedEquipment) return false;
+      if (feedSort === 'following' && !followingUserIds.has(post.author.id)) return false;
 
       // Lọc theo nhóm cơ
       if (selectedMuscle !== 'Tất cả nhóm cơ') {
@@ -151,7 +164,40 @@ function AppLayout() {
 
       return true;
     });
-  }, [posts, searchQuery, activeCategory, feedSort, selectedMuscle, selectedPriceRange]);
+  }, [posts, searchQuery, activeCategory, feedSort, selectedMuscle, selectedPriceRange, followingUserIds]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [searchQuery, activeCategory, feedSort, selectedMuscle, selectedPriceRange]);
+
+  // Infinite Scrolling IntersectionObserver
+  useEffect(() => {
+    if (loading || visibleCount >= filteredPosts.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && !loadingMore) {
+          setLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => Math.min(prev + 5, filteredPosts.length));
+            setLoadingMore(false);
+          }, 350);
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) observer.unobserve(currentRef);
+    };
+  }, [loading, visibleCount, filteredPosts.length, loadingMore]);
 
   const handleAddPost = async (newPost: SocialPost) => {
     const success = await createPost(
@@ -287,7 +333,7 @@ function AppLayout() {
               </div>
             ) : filteredPosts.length > 0 ? (
               <div className="space-y-4">
-                {filteredPosts.map((post) => (
+                {filteredPosts.slice(0, visibleCount).map((post) => (
                   <PostCard
                     key={post.id}
                     post={post}
@@ -297,6 +343,46 @@ function AppLayout() {
                     onEdit={setEditingPost}
                   />
                 ))}
+
+                {/* Infinite Scrolling Sentinel & Loader */}
+                {visibleCount < filteredPosts.length && (
+                  <div
+                    ref={loadMoreRef}
+                    className="py-6 flex items-center justify-center gap-2 text-xs text-amber-400 font-semibold animate-pulse"
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                    <span>Đang tải thêm bài viết ({visibleCount}/{filteredPosts.length})...</span>
+                  </div>
+                )}
+
+                {/* End of Feed Badge */}
+                {visibleCount >= filteredPosts.length && filteredPosts.length > 0 && (
+                  <div className="py-8 text-center text-xs text-slate-500 flex items-center justify-center gap-3">
+                    <div className="h-px bg-slate-800/80 w-16 sm:w-24" />
+                    <span className="font-medium text-slate-400">
+                      🎉 Bạn đã xem hết tất cả {filteredPosts.length} bài viết!
+                    </span>
+                    <div className="h-px bg-slate-800/80 w-16 sm:w-24" />
+                  </div>
+                )}
+              </div>
+            ) : feedSort === 'following' ? (
+              <div className="text-center py-16 px-4 bg-slate-900/50 rounded-3xl border border-slate-800 space-y-4">
+                <div className="w-14 h-14 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/20">
+                  <Users className="w-7 h-7" />
+                </div>
+                <h4 className="text-base font-bold text-white">Chưa có bài viết từ người bạn theo dõi</h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Hãy theo dõi các huấn luyện viên (PT), reviewer và chủ phòng gym để không bỏ lỡ những bài đánh giá thiết bị mới nhất của họ!
+                </p>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    onClick={() => setFeedSort('latest')}
+                    className="px-4 py-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl hover:from-amber-400 hover:to-orange-400 transition shadow-lg shadow-orange-500/20 cursor-pointer"
+                  >
+                    Khám Phá Bài Viết Mới
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-16 px-4 bg-slate-900/50 rounded-2xl border border-slate-800 space-y-4">
@@ -309,7 +395,7 @@ function AppLayout() {
                 </p>
                 <button
                   onClick={handleResetFilters}
-                  className="px-4 py-2 text-xs font-bold text-amber-400 bg-amber-500/10 rounded-xl border border-amber-500/30 hover:bg-amber-500/20 transition shadow-sm"
+                  className="px-4 py-2 text-xs font-bold text-amber-400 bg-amber-500/10 rounded-xl border border-amber-500/30 hover:bg-amber-500/20 transition shadow-sm cursor-pointer"
                 >
                   Xoá Tất Cả Bộ Lọc
                 </button>

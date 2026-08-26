@@ -12,7 +12,7 @@ import {
   X
 } from 'lucide-react';
 
-export type FeedSortOption = 'latest' | 'trending' | 'verified' | 'tagged';
+export type FeedSortOption = 'latest' | 'trending' | 'following' | 'tagged' | 'verified';
 
 interface AdvancedFilterBarProps {
   currentSort: FeedSortOption;
@@ -67,6 +67,7 @@ export default function AdvancedFilterBar({
           {[
             { id: 'latest', label: 'Mới Nhất', icon: <Clock className="w-3.5 h-3.5" /> },
             { id: 'trending', label: 'Thịnh Hành', icon: <Flame className="w-3.5 h-3.5" /> },
+            { id: 'following', label: 'Đang Theo Dõi', icon: <Sparkles className="w-3.5 h-3.5 text-amber-400" /> },
             { id: 'tagged', label: 'Có Gắn Thẻ Máy', icon: <Dumbbell className="w-3.5 h-3.5" /> },
             { id: 'verified', label: 'Đã Xác Minh', icon: <CheckCircle className="w-3.5 h-3.5" /> },
           ].map((tab) => {

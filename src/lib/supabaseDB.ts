@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { SocialPost, BookingRequest, UserAuthor, UserRole, PostComment } from '@/types';
+import { MOCK_POSTS } from '@/data/mockData';
 
 async function getCurrentAuthId(): Promise<string | undefined> {
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -23,7 +24,7 @@ export async function fetchPosts(currentUserId?: string) {
 
   if (postsRes.error) {
     console.error("Error fetching posts:", postsRes.error);
-    return [];
+    return MOCK_POSTS;
   }
 
   const equipments = equipRes.data || [];
@@ -875,6 +876,45 @@ export async function isFollowingUser(targetUserId: string, followerUserId?: str
   return !!(data && data.id);
 }
 
+export async function getFollowingUserIds(userId?: string): Promise<Set<string>> {
+  let currentAuthId: string | null = null;
+  if (userId) {
+    currentAuthId = await getAuthIdByUserId(userId);
+  }
+  if (!currentAuthId) {
+    currentAuthId = ((await getCurrentAuthId()) as string | null) || null;
+  }
+  if (!currentAuthId) return new Set();
+
+  try {
+    const { data: followsData } = await supabase
+      .from('follows')
+      .select('following_auth')
+      .eq('follower_auth', currentAuthId);
+
+    if (!followsData || followsData.length === 0) return new Set();
+
+    const targetAuthIds = followsData.map((f: any) => f.following_auth).filter(Boolean);
+    if (targetAuthIds.length === 0) return new Set();
+
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, auth_id')
+      .in('auth_id', targetAuthIds);
+
+    const followingProfileIds = new Set<string>();
+    (usersData || []).forEach((u: any) => {
+      if (u.id) followingProfileIds.add(u.id);
+      if (u.auth_id) followingProfileIds.add(u.auth_id);
+    });
+
+    return followingProfileIds;
+  } catch (err) {
+    console.warn('Lỗi getFollowingUserIds:', err);
+    return new Set();
+  }
+}
+
 export async function toggleFollowUser(targetUserId: string, followerUserId?: string): Promise<{ following: boolean; followersCount: number }> {
   let currentAuthId = await getCurrentAuthId();
   if (!currentAuthId && followerUserId) {
@@ -1613,16 +1653,49 @@ function saveLocalNotifs(notifs: AppNotification[]) {
 }
 
 export async function fetchNotifications(userId?: string): Promise<AppNotification[]> {
-  // Bảng notifications chưa được tạo trong DB → dùng localStorage với sample + real notifications
+  let dbNotifs: AppNotification[] = [];
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (userId && uuidRegex.test(userId)) {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        dbNotifs = data.map((n: any) => ({
+          id: n.id,
+          userId: n.user_id,
+          actorId: n.actor_id,
+          actorName: n.actor_name || 'Thành viên',
+          actorAvatar: n.actor_avatar || '/default-avatar.svg',
+          type: n.type,
+          title: n.title,
+          content: n.content,
+          targetId: n.target_id,
+          isRead: n.is_read || false,
+          createdAt: n.created_at,
+        }));
+      }
+    } catch (err) {
+      console.warn('Lỗi fetchNotifications từ DB:', err);
+    }
+  }
+
+  // Lấy local notifications fallback
   const local = getLocalNotifs();
-  
-  // Filter cho đúng người nhận (userId = 'current_user' là broadcast/system chung)
-  const filtered = local.filter(n => {
+  const filteredLocal = local.filter((n) => {
     if (!userId) return true;
     return n.userId === userId || n.userId === 'current_user';
   });
 
-  return filtered.sort(
+  const notifMap = new Map<string, AppNotification>();
+  filteredLocal.forEach((n) => notifMap.set(n.id, n));
+  dbNotifs.forEach((n) => notifMap.set(n.id, n));
+
+  return Array.from(notifMap.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
@@ -1651,9 +1724,31 @@ export async function createNotification(notif: {
     createdAt: new Date().toISOString(),
   };
 
+  // 1. Lưu local cache
   const list = getLocalNotifs();
-  // Đưa thông báo mới lên đầu
   saveLocalNotifs([newNotif, ...list]);
+
+  // 2. Ghi trực tiếp vào Supabase notifications table
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (notif.userId && uuidRegex.test(notif.userId)) {
+    try {
+      await supabase.from('notifications').insert({
+        user_id: notif.userId,
+        actor_id: notif.actorId && uuidRegex.test(notif.actorId) ? notif.actorId : null,
+        actor_name: notif.actorName || 'Thành viên',
+        actor_avatar: notif.actorAvatar || '/default-avatar.svg',
+        type: notif.type,
+        title: notif.title,
+        content: notif.content,
+        target_id: notif.targetId || null,
+        is_read: false,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Lỗi ghi notification vào Supabase:', err);
+    }
+  }
+
   return newNotif;
 }
 
@@ -1661,15 +1756,27 @@ export async function markNotificationAsRead(id: string): Promise<boolean> {
   const local = getLocalNotifs();
   const updated = local.map(n => n.id === id ? { ...n, isRead: true } : n);
   saveLocalNotifs(updated);
-  // TODO: await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(id)) {
+    try {
+      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+    } catch (_) {}
+  }
   return true;
 }
 
-export async function markAllNotificationsAsRead(): Promise<boolean> {
+export async function markAllNotificationsAsRead(userId?: string): Promise<boolean> {
   const local = getLocalNotifs();
   const updated = local.map(n => ({ ...n, isRead: true }));
   saveLocalNotifs(updated);
-  // TODO: await supabase.from('notifications').update({ is_read: true }).eq('user_id', authId);
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (userId && uuidRegex.test(userId)) {
+    try {
+      await supabase.from('notifications').update({ is_read: true }).eq('user_id', userId);
+    } catch (_) {}
+  }
   return true;
 }
 
