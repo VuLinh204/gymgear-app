@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { CATEGORIES } from '@/data/mockData';
-import { CategoryType } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { fetchCategories } from '@/lib/supabaseDB';
+import { CategoryType, CategoryItem } from '@/types';
 import { Activity, Dumbbell, Home, Layers, Disc, Grid, ArrowUpDown } from 'lucide-react';
 
 interface CategoryFilterProps {
@@ -18,6 +18,12 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   sortBy,
   onSelectSort
 }) => {
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+  useEffect(() => {
+    fetchCategories().then(setCategories);
+  }, []);
+
   const getIcon = (iconName: string) => {
     switch (iconName) {
       case 'Activity': return <Activity className="w-4 h-4" />;
@@ -36,8 +42,9 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
           
           {/* Category Tabs */}
           <div className="flex items-center space-x-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const isActive = activeCategory === cat.id;
+
               return (
                 <button
                   key={cat.id}

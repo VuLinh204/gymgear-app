@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Equipment } from '@/types';
-import { MOCK_EQUIPMENTS } from '@/data/mockData';
+import { fetchEquipments } from '@/lib/supabaseDB';
 import { 
   X, 
   Scale, 
@@ -31,17 +31,29 @@ export default function EquipmentCompareModal({
   initialEquip2,
   onOpenBooking,
 }: EquipmentCompareModalProps) {
-  const [equip1Id, setEquip1Id] = useState<string>(
-    initialEquip1?.id || MOCK_EQUIPMENTS[0]?.id || ''
-  );
-  const [equip2Id, setEquip2Id] = useState<string>(
-    initialEquip2?.id || MOCK_EQUIPMENTS[1]?.id || ''
-  );
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [equip1Id, setEquip1Id] = useState<string>(initialEquip1?.id || '');
+  const [equip2Id, setEquip2Id] = useState<string>(initialEquip2?.id || '');
+
+  useEffect(() => {
+    fetchEquipments().then(data => {
+      setEquipments(data);
+      if (!equip1Id && data.length > 0) {
+        setEquip1Id(initialEquip1?.id || data[0].id);
+      }
+      if (!equip2Id && data.length > 1) {
+        setEquip2Id(initialEquip2?.id || data[1].id);
+      }
+    });
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const equip1 = MOCK_EQUIPMENTS.find((e) => e.id === equip1Id) || MOCK_EQUIPMENTS[0];
-  const equip2 = MOCK_EQUIPMENTS.find((e) => e.id === equip2Id) || MOCK_EQUIPMENTS[1];
+  const equip1 = equipments.find((e) => e.id === equip1Id) || initialEquip1 || equipments[0];
+  const equip2 = equipments.find((e) => e.id === equip2Id) || initialEquip2 || equipments[1] || equipments[0];
+
+  if (!equip1 || !equip2) return null;
+
 
   return (
     <div className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto font-sans">
@@ -87,7 +99,7 @@ export default function EquipmentCompareModal({
                 onChange={(e) => setEquip1Id(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs font-semibold focus:outline-none focus:border-amber-500 mb-3"
               >
-                {MOCK_EQUIPMENTS.map((eq) => (
+                {equipments.map((eq) => (
                   <option key={eq.id} value={eq.id} disabled={eq.id === equip2Id}>
                     {eq.name}
                   </option>
@@ -124,12 +136,13 @@ export default function EquipmentCompareModal({
                 onChange={(e) => setEquip2Id(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs font-semibold focus:outline-none focus:border-amber-500 mb-3"
               >
-                {MOCK_EQUIPMENTS.map((eq) => (
+                {equipments.map((eq) => (
                   <option key={eq.id} value={eq.id} disabled={eq.id === equip1Id}>
                     {eq.name}
                   </option>
                 ))}
               </select>
+
 
               <div className="relative w-full h-36 sm:h-48 rounded-xl overflow-hidden mb-3 border border-slate-800">
                 <img src={equip2.thumbnail} alt={equip2.name} className="w-full h-full object-cover" />

@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { CATEGORIES } from '@/data/mockData';
-import { CategoryType } from '@/types';
+import { CategoryType, CategoryItem } from '@/types';
+import { fetchCategories } from '@/lib/supabaseDB';
 import { Newspaper, Dumbbell, MapPin, Bookmark, Sparkles, Activity, Home, Layers, Disc, Grid, Users, Crown, ShieldCheck, UserCheck, Eye, User, Settings, Trophy, Scale, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -25,6 +25,11 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
   onOpenCompare
 }) => {
   const { currentUser, role, isGuest, isPremium, isAdmin, requestAuth } = useAuth();
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+  useEffect(() => {
+    fetchCategories().then(setCategories);
+  }, []);
 
   const getCategoryIcon = (iconName: string) => {
     switch (iconName) {
@@ -223,7 +228,7 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
           Lọc Theo Loại Máy Tập
         </div>
 
-        {CATEGORIES.map((cat) => {
+        {categories.map((cat) => {
           if (cat.id === 'all') return null;
           const isActive = activeCategory === cat.id;
           return (

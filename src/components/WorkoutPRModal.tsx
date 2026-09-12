@@ -21,9 +21,10 @@ import {
   fetchUserPRs, 
   saveUserPR, 
   deleteUserPR, 
-  createPost 
+  createPost,
+  fetchEquipments
 } from '@/lib/supabaseDB';
-import { MOCK_EQUIPMENTS } from '@/data/mockData';
+import { Equipment } from '@/types';
 
 interface WorkoutPRModalProps {
   isOpen: boolean;
@@ -58,10 +59,15 @@ export default function WorkoutPRModal({
   const [isAdding, setIsAdding] = useState(false);
   const [sharingPRId, setSharingPRId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
 
   const loadPRs = async () => {
-    const data = await fetchUserPRs();
+    const [data, equips] = await Promise.all([
+      fetchUserPRs(),
+      fetchEquipments()
+    ]);
     setPrs(data);
+    setEquipments(equips);
   };
 
   useEffect(() => {
@@ -265,7 +271,7 @@ export default function WorkoutPRModal({
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs"
                 >
                   <option value="">-- Gắn thẻ máy tập (Tùy chọn) --</option>
-                  {MOCK_EQUIPMENTS.map((eq) => (
+                  {equipments.map((eq) => (
                     <option key={eq.id} value={eq.id}>
                       {eq.name}
                     </option>
@@ -296,7 +302,7 @@ export default function WorkoutPRModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {prs.map((pr) => {
                   const eq = pr.equipmentId
-                    ? MOCK_EQUIPMENTS.find((e) => e.id === pr.equipmentId)
+                    ? equipments.find((e) => e.id === pr.equipmentId)
                     : null;
 
                   return (

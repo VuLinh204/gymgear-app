@@ -21,9 +21,10 @@ import {
   ChatContact, 
   fetchChatContacts, 
   fetchChatMessages, 
-  sendChatMessage 
+  sendChatMessage,
+  fetchEquipments
 } from '@/lib/supabaseDB';
-import { MOCK_EQUIPMENTS } from '@/data/mockData';
+import { Equipment } from '@/types';
 
 interface ChatWidgetProps {
   onOpenEquipmentDetail?: (equipmentId: string) => void;
@@ -45,10 +46,12 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
   const [inputText, setInputText] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
   const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchChatContacts().then(setContacts);
+    fetchEquipments().then(setEquipments);
   }, []);
 
   useEffect(() => {
@@ -209,7 +212,7 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
                 {messages.map((msg) => {
                   const isMe = msg.senderId === currentUser?.id || msg.senderId === 'current_user';
                   const taggedEq = msg.equipmentId
-                    ? MOCK_EQUIPMENTS.find((e) => e.id === msg.equipmentId)
+                    ? equipments.find((e) => e.id === msg.equipmentId)
                     : null;
 
                   return (
@@ -283,7 +286,7 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs"
                   >
                     <option value="">-- Không đính kèm máy --</option>
-                    {MOCK_EQUIPMENTS.map((eq) => (
+                    {equipments.map((eq) => (
                       <option key={eq.id} value={eq.id}>
                         {eq.name} ({eq.brand})
                       </option>

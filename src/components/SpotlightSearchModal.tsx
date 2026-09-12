@@ -23,12 +23,13 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Equipment, SocialPost } from '@/types';
-import { MOCK_EQUIPMENTS } from '@/data/mockData';
+import { fetchEquipments } from '@/lib/supabaseDB';
 
 interface SpotlightSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   posts: SocialPost[];
+  equipments?: Equipment[];
   onSelectEquipment: (equipment: Equipment) => void;
   onSelectPost?: (post: SocialPost) => void;
   onOpenPRTracker: () => void;
@@ -64,6 +65,7 @@ export default function SpotlightSearchModal({
   isOpen,
   onClose,
   posts,
+  equipments: propEquipments,
   onSelectEquipment,
   onSelectPost,
   onOpenPRTracker,
@@ -74,8 +76,18 @@ export default function SpotlightSearchModal({
 }: SpotlightSearchModalProps) {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'equipment' | 'posts' | 'actions'>('all');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [loadedEquipments, setLoadedEquipments] = useState<Equipment[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (propEquipments && propEquipments.length > 0) {
+      setLoadedEquipments(propEquipments);
+    } else {
+      fetchEquipments().then(setLoadedEquipments);
+    }
+  }, [propEquipments, isOpen]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -116,9 +128,10 @@ export default function SpotlightSearchModal({
   const normQuery = useMemo(() => removeVietnameseTones(query), [query]);
 
   // 1. Lọc Thiết bị
+  const allEquipments = propEquipments || loadedEquipments;
   const filteredEquipments = useMemo(() => {
-    if (!normQuery) return MOCK_EQUIPMENTS.slice(0, 4);
-    return MOCK_EQUIPMENTS.filter((eq) => {
+    if (!normQuery) return allEquipments.slice(0, 4);
+    return allEquipments.filter((eq) => {
       const name = removeVietnameseTones(eq.name);
       const brand = removeVietnameseTones(eq.brand);
       const category = removeVietnameseTones(eq.category);
@@ -132,7 +145,7 @@ export default function SpotlightSearchModal({
         muscles.includes(normQuery)
       );
     });
-  }, [normQuery]);
+  }, [normQuery, allEquipments]);
 
   // 2. Lọc Bài viết
   const filteredPosts = useMemo(() => {

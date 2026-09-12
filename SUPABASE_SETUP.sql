@@ -295,3 +295,163 @@ DO $$ BEGIN
     FOR DELETE USING (true);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- ============================================================
+-- PHẦN 11: BẢNG EQUIPMENTS (Thiết bị máy tập gym)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.equipments (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT,
+  brand TEXT NOT NULL,
+  category TEXT NOT NULL,
+  type TEXT DEFAULT 'commercial',
+  model_number TEXT,
+  price_range TEXT,
+  vip_price TEXT,
+  estimated_price NUMERIC,
+  rating NUMERIC DEFAULT 5.0,
+  review_count INTEGER DEFAULT 0,
+  thumbnail TEXT,
+  gallery JSONB DEFAULT '[]'::jsonb,
+  excerpt TEXT,
+  full_description TEXT,
+  specifications JSONB DEFAULT '{}'::jsonb,
+  pros JSONB DEFAULT '[]'::jsonb,
+  cons JSONB DEFAULT '[]'::jsonb,
+  is_featured BOOLEAN DEFAULT false,
+  available_for_booking BOOLEAN DEFAULT true,
+  showroom_locations JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.equipments ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "equipments_select_all" ON public.equipments FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "equipments_insert_auth" ON public.equipments FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "equipments_update_auth" ON public.equipments FOR UPDATE USING (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- PHẦN 12: BẢNG CATEGORIES (Danh mục thiết bị)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  icon_name TEXT NOT NULL,
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "categories_select_all" ON public.categories FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Seed Categories
+INSERT INTO public.categories (id, name, description, icon_name, display_order)
+VALUES
+  ('all', 'Tất cả bài viết', 'Toàn bộ bài review & chia sẻ kinh nghiệm máy tập', 'Grid', 1),
+  ('cardio', 'Máy Cardio', 'Máy chạy bộ, xe đạp trượt tuyết, máy chèo thuyền', 'Activity', 2),
+  ('strength', 'Máy Sức Mạnh', 'Máy ép ngực, kéo xô, leg press, đạp đùi chuyên sâu', 'Dumbbell', 3),
+  ('home-gym', 'Thiết Bị Home Gym', 'Khung gánh đa năng, máy tập tổng hợp gia đình', 'Home', 4),
+  ('racks-benches', 'Khung Gánh & Ghế', 'Power rack, Smith machine, ghế tập bụng & tạ', 'Layers', 5),
+  ('accessories', 'Phụ Kiện Gym', 'Tạ đơn, tạ đĩa, thảm cao su chuyên dụng', 'Disc', 6)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  icon_name = EXCLUDED.icon_name,
+  display_order = EXCLUDED.display_order;
+
+-- ============================================================
+-- PHẦN 13: BẢNG SHOWROOMS (Hệ thống chi nhánh Showroom)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.showrooms (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  address TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  hours TEXT NOT NULL,
+  machines INTEGER DEFAULT 0,
+  rating NUMERIC DEFAULT 4.8,
+  brands JSONB DEFAULT '[]'::jsonb,
+  image TEXT,
+  tags JSONB DEFAULT '[]'::jsonb,
+  is_open BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.showrooms ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "showrooms_select_all" ON public.showrooms FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Seed Showrooms
+INSERT INTO public.showrooms (name, address, phone, hours, machines, rating, brands, image, tags, is_open)
+VALUES
+  ('GymGear Showroom Hà Nội - Cầu Giấy', '12 Trần Thái Tông, Cầu Giấy, Hà Nội', '024 3789 1234', 'T2-T7: 8:00-21:00 | CN: 9:00-18:00', 45, 4.8, '["Impulse", "Matrix", "Technogym"]'::jsonb, 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800', '["Thương mại", "Home Gym", "Máy Cardio"]'::jsonb, true),
+  ('GymGear Showroom TP.HCM - Bình Thạnh', '290 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM', '028 3895 6789', 'T2-T7: 8:00-21:00 | CN: 9:00-18:00', 60, 4.9, '["DHZ", "Panatta", "BH Fitness"]'::jsonb, 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800', '["Thương mại", "Máy Sức Mạnh", "Khung Gánh"]'::jsonb, true),
+  ('GymGear Showroom Đà Nẵng', '45 Nguyễn Văn Linh, Thanh Khê, Đà Nẵng', '0236 3892 345', 'T2-T6: 8:30-20:00 | T7-CN: 9:00-17:00', 30, 4.7, '["Life Fitness", "Matrix", "Impulse"]'::jsonb, 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800', '["Thương mại", "Máy Cardio", "Đa Năng"]'::jsonb, false),
+  ('GymGear Showroom TP.HCM - Quận 7', '168 Nguyễn Thị Thập, Tân Phú, Quận 7, TP.HCM', '028 5412 3698', 'T2-T7: 8:00-22:00 | CN: 9:00-18:00', 50, 4.8, '["Technogym", "Cybex", "Precor"]'::jsonb, 'https://images.unsplash.com/photo-1593079831268-3381b0db4a77?w=800', '["VIP Cao Cấp", "Thương mại", "Cardio", "Sức Mạnh"]'::jsonb, true),
+  ('GymGear Showroom Hà Nội - Long Biên', '58 Ngô Gia Tự, Long Biên, Hà Nội', '024 3762 9087', 'T2-T7: 8:00-20:00 | CN: Đóng cửa', 35, 4.6, '["DHZ", "Impulse", "BH Fitness"]'::jsonb, 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800', '["Home Gym", "Tiết Kiệm", "Máy Sức Mạnh"]'::jsonb, true)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- PHẦN 14: BẢNG REVIEWS (Đánh giá thiết bị máy tập)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  equipment_id TEXT NOT NULL,
+  user_id TEXT,
+  user_name TEXT NOT NULL,
+  user_role TEXT,
+  user_avatar TEXT,
+  rating NUMERIC NOT NULL,
+  title TEXT NOT NULL,
+  comment TEXT NOT NULL,
+  verified_booking BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "reviews_select_all" ON public.reviews FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "reviews_insert_all" ON public.reviews FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Seed Reviews mẫu ban đầu
+INSERT INTO public.reviews (id, equipment_id, user_name, user_role, rating, title, comment, verified_booking)
+VALUES
+  ('3c11f44a-9b16-4df1-872e-0a562ef2a001', 'eq-1', 'Nguyễn Văn Hùng', 'Chủ chuỗi Gym FitPlus (3 cơ sở)', 5, 'PT300H xứng đáng là máy chạy bền nhất!', 'Tôi đã sắm 8 con Impulse PT300H cho 2 chi nhánh ở Cầu Giấy và Hà Đông. Máy chạy êm ru, hội viên chạy ngày 16 tiếng không thấy hỏng vặt bao giờ.', true),
+  ('3c11f44a-9b16-4df1-872e-0a562ef2a002', 'eq-2', 'Trần Hoàng Nam', 'HLV Cá Nhân (Personal Trainer)', 5, 'Leg Press DHZ đạp cực êm, chuẩn form', 'Con Leg Press DHZ Fusion này góc đạp 45 độ chuẩn đét, đệm lưng ôm sát cột sống nên khách hàng tớ đạp 300kg vẫn an toàn khớp gối.', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- PHẦN 15: CHÍNH SÁCH RLS BOOKINGS CHO KHÁCH & SEED BOOKINGS
+-- ============================================================
+DO $$ BEGIN
+  CREATE POLICY "bookings_insert_public" ON public.bookings FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "bookings_select_public" ON public.bookings FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "bookings_update_all" ON public.bookings FOR UPDATE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+

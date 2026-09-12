@@ -25,7 +25,7 @@ import SpotlightSearchModal from '@/components/SpotlightSearchModal';
 import FeatureGuideModal from '@/components/FeatureGuideModal';
 import AdvancedFilterBar, { FeedSortOption } from '@/components/AdvancedFilterBar';
 import BackToTopButton from '@/components/BackToTopButton';
-import { MOCK_EQUIPMENTS } from '@/data/mockData';
+import { fetchEquipments } from '@/lib/supabaseDB';
 
 // ─── Inner layout (inside AuthProvider) ──────────────────────────────────────
 function AppLayout() {
@@ -38,6 +38,7 @@ function AppLayout() {
   const [selectedMuscle, setSelectedMuscle] = useState('Tất cả nhóm cơ');
   const [selectedPriceRange, setSelectedPriceRange] = useState('all');
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Infinite Scroll state
@@ -76,6 +77,7 @@ function AppLayout() {
       }
     };
     loadData();
+    fetchEquipments().then(setEquipments);
   }, [currentUser.id]);
 
   // 2. Lắng nghe phím tắt toàn năng (Global Shortcuts)
@@ -420,11 +422,12 @@ function AppLayout() {
 
       {/* ── Modals & Widgets ──────────────────────────────────────────────── */}
       
-      {/* Spotlight Universal Search (Ctrl + K) */}
+      {/* Spotlight Command Search Modal */}
       <SpotlightSearchModal
         isOpen={spotlightOpen}
         onClose={() => setSpotlightOpen(false)}
         posts={posts}
+        equipments={equipments}
         onSelectEquipment={(eq) => setSelectedEquipment(eq)}
         onSelectPost={(post) => {
           // Focus scroll tới post
@@ -493,7 +496,7 @@ function AppLayout() {
       {/* Direct Gym Chat Widget */}
       <ChatWidget
         onOpenEquipmentDetail={(id) => {
-          const eq = MOCK_EQUIPMENTS.find((e: Equipment) => e.id === id);
+          const eq = equipments.find((e: Equipment) => e.id === id);
           if (eq) setSelectedEquipment(eq);
         }}
       />

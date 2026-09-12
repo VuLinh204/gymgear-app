@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Equipment } from '@/types';
-import { MOCK_REVIEWS } from '@/data/mockData';
-import { X, Star, ShieldCheck, CheckCircle2, XCircle, MapPin, CalendarCheck, Crown, Award, Lock } from 'lucide-react';
+import { Equipment, EquipmentReview } from '@/types';
+import { fetchEquipmentReviews, submitEquipmentReview } from '@/lib/supabaseDB';
+import { X, Star, ShieldCheck, CheckCircle2, XCircle, MapPin, CalendarCheck, Crown, Award, Lock, MessageSquare, Send, Loader2, Plus } from 'lucide-react';
 
 interface EquipmentDetailModalProps {
   equipment: Equipment | null;
@@ -13,17 +13,66 @@ interface EquipmentDetailModalProps {
 }
 
 export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equipment, onClose, onOpenBooking }) => {
-  const { isPremium, isAdmin, isGuest } = useAuth();
+  const { currentUser, isPremium, isAdmin, isGuest, requestAuth } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'specs' | 'reviews'>('overview');
   const [selectedImage, setSelectedImage] = useState<string>(equipment?.thumbnail ?? equipment?.gallery?.[0] ?? '');
+  
+  // Real DB Reviews State
+  const [reviews, setReviews] = useState<EquipmentReview[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newTitle, setNewTitle] = useState('');
+  const [newComment, setNewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (equipment) {
       setSelectedImage(equipment.thumbnail ?? equipment.gallery?.[0] ?? '');
+      // Load real reviews from DB
+      setLoadingReviews(true);
+      fetchEquipmentReviews(equipment.id)
+        .then(data => {
+          setReviews(data);
+          setLoadingReviews(false);
+        })
+        .catch(() => setLoadingReviews(false));
     }
   }, [equipment]);
 
+  const handlePostReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isGuest) {
+      requestAuth('login');
+      return;
+    }
+    if (!newComment.trim()) return;
+
+    if (!equipment) return;
+    setSubmittingReview(true);
+    const res = await submitEquipmentReview({
+      equipmentId: equipment.id,
+      userName: currentUser.name || 'Thành viên GymGear',
+      userRole: currentUser.roleTitle || (currentUser.role === 'premium' ? 'Hội viên VIP' : 'Thành viên'),
+      userAvatar: currentUser.avatar,
+      rating: newRating,
+      title: newTitle.trim() || 'Đánh giá trải nghiệm máy',
+      comment: newComment.trim()
+    });
+    setSubmittingReview(false);
+
+    if (res.success && res.review) {
+      setReviews([res.review, ...reviews]);
+      setNewTitle('');
+      setNewComment('');
+      setShowReviewForm(false);
+    } else {
+      alert(res.error || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+    }
+  };
+
   if (!equipment) return null;
+
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fadeIn">
@@ -250,25 +299,140 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
           )}
 
           {activeTab === 'reviews' && (
-            <div className="space-y-3">
-              {MOCK_REVIEWS.map((rev) => (
-                <div key={rev.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <div className="space-y-4">
+              {/* Nút bật/tắt form viết review */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <div className="text-xs text-slate-300">
+                  <span className="font-bold text-white">{reviews.length}</span> đánh giá từ hội viên thực tế
+                </div>
+                <button
+                  onClick={() => {
+                    if (isGuest) {
+                      requestAuth('login');
+                      return;
+                    }
+                    setShowReviewForm(!showReviewForm);
+                  }}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{showReviewForm ? 'Đóng form' : 'Viết đánh giá'}</span>
+                </button>
+              </div>
+
+              {/* Form viết đánh giá mới */}
+              {showReviewForm && (
+                <form onSubmit={handlePostReview} className="p-4 rounded-xl bg-slate-950 border border-amber-500/30 space-y-3 animate-fadeIn">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-white">{rev.userName}</span>
-                      {rev.userRole && <span className="text-[11px] text-amber-400 ml-2 font-mono">({rev.userRole})</span>}
-                    </div>
-                    <div className="flex items-center space-x-1 text-amber-400 text-xs">
-                      <Star className="w-3.5 h-3.5 fill-amber-400" />
-                      <span className="font-bold">{rev.rating}/5</span>
+                    <span className="text-xs font-bold text-amber-400">Đánh giá của bạn:</span>
+                    <div className="flex items-center space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          type="button"
+                          key={star}
+                          onClick={() => setNewRating(star)}
+                          className="p-1 text-slate-500 hover:text-amber-400 transition"
+                        >
+                          <Star className={`w-4 h-4 ${star <= newRating ? 'fill-amber-400 text-amber-400' : ''}`} />
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <h5 className="text-xs font-bold text-slate-200">{rev.title}</h5>
-                  <p className="text-xs text-slate-300 leading-relaxed">{rev.comment}</p>
+
+                  <input
+                    type="text"
+                    placeholder="Tiêu đề (VD: Máy chạy êm, khung chắc chắn...)"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+
+                  <textarea
+                    placeholder="Chia sẻ trải nghiệm thực tế khi tập luyện hoặc sử dụng thiết bị này..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 text-xs rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                    required
+                  />
+
+                  <div className="flex justify-end space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewForm(false)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingReview || !newComment.trim()}
+                      className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 disabled:opacity-50 transition"
+                    >
+                      {submittingReview ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Đang gửi...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Gửi Đánh Giá</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Danh sách các bài đánh giá */}
+              {loadingReviews ? (
+                <div className="text-center py-6 text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                  <span>Đang tải đánh giá từ Database...</span>
                 </div>
-              ))}
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-400 bg-slate-950/50 rounded-xl border border-slate-800">
+                  Chưa có bài đánh giá nào cho máy này. Hãy là người đầu tiên trải nghiệm và chia sẻ!
+                </div>
+              ) : (
+                reviews.map((rev) => (
+                  <div key={rev.id} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        {rev.userAvatar ? (
+                          <img src={rev.userAvatar} alt={rev.userName} className="w-6 h-6 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-amber-400">
+                            {rev.userName[0]}
+                          </div>
+                        )}
+                        <span className="text-xs font-bold text-white">{rev.userName}</span>
+                        {rev.userRole && <span className="text-[11px] text-amber-400 font-mono">({rev.userRole})</span>}
+                        {rev.verifiedBooking && (
+                          <span className="inline-flex items-center text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                            ✓ Đã trải nghiệm máy
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1 text-amber-400 text-xs">
+                        <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        <span className="font-bold">{rev.rating}/5</span>
+                      </div>
+                    </div>
+                    {rev.title && <h5 className="text-xs font-bold text-slate-200">{rev.title}</h5>}
+                    <p className="text-xs text-slate-300 leading-relaxed">{rev.comment}</p>
+                    {rev.createdAt && (
+                      <div className="text-[10px] text-slate-500 text-right">
+                        {new Date(rev.createdAt).toLocaleDateString('vi-VN')}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
+
 
         </div>
 

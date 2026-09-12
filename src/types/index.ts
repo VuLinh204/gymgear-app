@@ -97,3 +97,39 @@ export interface BookingRequest {
   userRole?: UserRole;
   createdAt?: string;
 }
+
+export interface EquipmentReview {
+  id: string;
+  equipmentId: string;
+  userName: string;
+  userRole?: string;
+  userAvatar?: string;
+  rating: number;
+  date?: string;
+  title: string;
+  comment: string;
+  verifiedBooking?: boolean;
+  createdAt?: string;
+}
+
+export interface ShowroomItem {
+  id: number | string;
+  name: string;
+  address: string;
+  phone: string;
+  hours: string;
+  machines: number;
+  rating: number;
+  brands: string[];
+  image: string;
+  tags: string[];
+  isOpen: boolean;
+}
+
+export interface CategoryItem {
+  id: CategoryType;
+  name: string;
+  description: string;
+  iconName: string;
+}
+

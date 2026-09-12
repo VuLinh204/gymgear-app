@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { uploadImage, createStory } from '@/lib/supabaseDB';
-import { MOCK_EQUIPMENTS } from '@/data/mockData';
+import { uploadImage, createStory, fetchEquipments } from '@/lib/supabaseDB';
+import { Equipment } from '@/types';
 import { 
   X, 
   Upload, 
@@ -62,7 +62,12 @@ export default function CreateStoryModal({
   const [taggedEquipment, setTaggedEquipment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchEquipments().then(setEquipments);
+  }, []);
 
   // Cập nhật preview khi file thay đổi
   useEffect(() => {
@@ -244,7 +249,7 @@ export default function CreateStoryModal({
                     {taggedEquipment && (
                       <span className="inline-flex items-center gap-1 text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded mb-1">
                         <Dumbbell className="w-2.5 h-2.5" />
-                        {MOCK_EQUIPMENTS.find(e => e.id === taggedEquipment)?.name || 'Thiết bị'}
+                        {equipments.find(e => e.id === taggedEquipment)?.name || 'Thiết bị'}
                       </span>
                     )}
                     {caption && (
@@ -379,7 +384,7 @@ export default function CreateStoryModal({
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-white text-xs focus:outline-none focus:border-amber-500 transition-colors"
               >
                 <option value="">-- Không gắn thẻ máy tập --</option>
-                {MOCK_EQUIPMENTS.map((eq) => (
+                {equipments.map((eq) => (
                   <option key={eq.id} value={eq.id}>
                     {eq.name} ({eq.brand})
                   </option>

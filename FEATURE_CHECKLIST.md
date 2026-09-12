@@ -53,9 +53,21 @@ This file lists remaining features, their current status, and notes or related f
   - Status: completed
   - Files: `src/components/StoriesBar.tsx`, `src/components/StoryViewer.tsx`, `src/app/api/stories/[id]/route.ts`, `SUPABASE_SETUP.sql`.
 
+- [x] Chuyển đổi toàn bộ dữ liệu cứng (Mock Data) sang Supabase Database
+  - Status: completed
+  - Notes:
+    - Nạp đủ 6/6 thiết bị máy tập (`eq-1` đến `eq-6`) vào bảng `equipments` của Supabase.
+    - Đồng bộ `SEED_BOOKINGS` vào bảng `bookings` của Supabase.
+    - Tạo bảng `reviews`, `showrooms`, `categories` và nạp dữ liệu mẫu vào `SUPABASE_SETUP.sql`.
+    - Tạo API route `/api/booking/route.ts` xử lý đặt lịch an toàn vượt qua RLS.
+    - Tạo API route `/api/reviews/route.ts` cho phép đọc và viết review thiết bị lưu vào DB.
+    - Tái cấu trúc `src/lib/db.ts` thành bridge thống nhất kết nối trực tiếp Supabase.
+    - Cập nhật tất cả components (`EquipmentDetailModal`, `ShowroomPage`, `ChatWidget`, `EquipmentCompareModal`, `SpotlightSearchModal`, `WorkoutPRModal`, `CreateStoryModal`, `CategoryFilter`, `page.tsx`, `community/page.tsx`) loại bỏ hoàn toàn `MOCK_EQUIPMENTS` / `MOCK_REVIEWS` / `SHOWROOMS` tĩnh.
+
 - [ ] Badges / awards system
   - Status: not-started
 
 - [ ] Chatbot integration
   - Status: not-started
+
 

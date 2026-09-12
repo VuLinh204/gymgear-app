@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { BookingModal } from '@/components/BookingModal';
 import EquipmentCompareModal from '@/components/EquipmentCompareModal';
-import { Equipment } from '@/types';
-import { MOCK_EQUIPMENTS } from '@/data/mockData';
+import { Equipment, ShowroomItem } from '@/types';
+import { fetchShowrooms, fetchEquipments } from '@/lib/supabaseDB';
 import { 
   MapPin, 
   Clock, 
@@ -18,76 +18,9 @@ import {
   Sparkles, 
   Crown, 
   Dumbbell,
-  CheckCircle2
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
-
-const SHOWROOMS = [
-  {
-    id: 1,
-    name: 'GymGear Showroom Hà Nội - Cầu Giấy',
-    address: '12 Trần Thái Tông, Cầu Giấy, Hà Nội',
-    phone: '024 3789 1234',
-    hours: 'T2-T7: 8:00-21:00 | CN: 9:00-18:00',
-    machines: 45,
-    rating: 4.8,
-    brands: ['Impulse', 'Matrix', 'Technogym'],
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop&q=80',
-    tags: ['Thương mại', 'Home Gym', 'Máy Cardio'],
-    isOpen: true,
-  },
-  {
-    id: 2,
-    name: 'GymGear Showroom TP.HCM - Bình Thạnh',
-    address: '290 Xô Viết Nghệ Tĩnh, Bình Thạnh, TP.HCM',
-    phone: '028 3895 6789',
-    hours: 'T2-T7: 8:00-21:00 | CN: 9:00-18:00',
-    machines: 60,
-    rating: 4.9,
-    brands: ['DHZ', 'Panatta', 'BH Fitness'],
-    image: 'https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&auto=format&fit=crop&q=80',
-    tags: ['Thương mại', 'Máy Sức Mạnh', 'Khung Gánh'],
-    isOpen: true,
-  },
-  {
-    id: 3,
-    name: 'GymGear Showroom Đà Nẵng',
-    address: '45 Nguyễn Văn Linh, Thanh Khê, Đà Nẵng',
-    phone: '0236 3892 345',
-    hours: 'T2-T6: 8:30-20:00 | T7-CN: 9:00-17:00',
-    machines: 30,
-    rating: 4.7,
-    brands: ['Life Fitness', 'Matrix', 'Impulse'],
-    image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&auto=format&fit=crop&q=80',
-    tags: ['Thương mại', 'Máy Cardio', 'Đa Năng'],
-    isOpen: false,
-  },
-  {
-    id: 4,
-    name: 'GymGear Showroom TP.HCM - Quận 7',
-    address: '168 Nguyễn Thị Thập, Tân Phú, Quận 7, TP.HCM',
-    phone: '028 5412 3698',
-    hours: 'T2-T7: 8:00-22:00 | CN: 9:00-18:00',
-    machines: 50,
-    rating: 4.8,
-    brands: ['Technogym', 'Cybex', 'Precor'],
-    image: 'https://images.unsplash.com/photo-1593079831268-3381b0db4a77?w=800&auto=format&fit=crop&q=80',
-    tags: ['VIP Cao Cấp', 'Thương mại', 'Cardio', 'Sức Mạnh'],
-    isOpen: true,
-  },
-  {
-    id: 5,
-    name: 'GymGear Showroom Hà Nội - Long Biên',
-    address: '58 Ngô Gia Tự, Long Biên, Hà Nội',
-    phone: '024 3762 9087',
-    hours: 'T2-T7: 8:00-20:00 | CN: Đóng cửa',
-    machines: 35,
-    rating: 4.6,
-    brands: ['DHZ', 'Impulse', 'BH Fitness'],
-    image: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800&auto=format&fit=crop&q=80',
-    tags: ['Home Gym', 'Tiết Kiệm', 'Máy Sức Mạnh'],
-    isOpen: true,
-  },
-];
 
 export default function ShowroomPage() {
   const [search, setSearch] = useState('');
@@ -95,7 +28,22 @@ export default function ShowroomPage() {
   const [compareOpen, setCompareOpen] = useState(false);
   const [selectedEquipForBooking, setSelectedEquipForBooking] = useState<Equipment | null>(null);
 
-  const filtered = SHOWROOMS.filter(s =>
+  // Dynamic Data from DB
+  const [showrooms, setShowrooms] = useState<ShowroomItem[]>([]);
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchShowrooms(), fetchEquipments()])
+      .then(([dbShowrooms, dbEquips]) => {
+        setShowrooms(dbShowrooms);
+        setEquipments(dbEquips);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const filtered = showrooms.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.address.toLowerCase().includes(search.toLowerCase()) ||
     s.brands.some((b: string) => b.toLowerCase().includes(search.toLowerCase()))
@@ -105,6 +53,7 @@ export default function ShowroomPage() {
     setSelectedEquipForBooking(equip);
     setBookingOpen(true);
   };
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
@@ -170,7 +119,7 @@ export default function ShowroomPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {MOCK_EQUIPMENTS.slice(0, 3).map((eq) => (
+            {equipments.slice(0, 3).map((eq) => (
               <div key={eq.id} className="p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center gap-3 group hover:border-amber-500/40 transition">
                 <img src={eq.thumbnail} alt={eq.name} className="w-14 h-14 rounded-lg object-cover" />
                 <div className="min-w-0 flex-1">
@@ -186,6 +135,7 @@ export default function ShowroomPage() {
               </div>
             ))}
           </div>
+
         </div>
 
         {/* Danh sách Showroom Toàn Quốc */}

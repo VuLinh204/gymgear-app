@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -6,17 +6,10 @@ import { Footer } from '@/components/Footer';
 import { PostCard } from '@/components/PostCard';
 import { EquipmentDetailModal } from '@/components/EquipmentDetailModal';
 import { BookingModal } from '@/components/BookingModal';
-import { fetchPosts } from '@/lib/supabaseDB';
+import { fetchPosts, fetchCommunityStats } from '@/lib/supabaseDB';
 import { SocialPost, Equipment } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Users, Dumbbell, Award, TrendingUp, MessageSquare } from 'lucide-react';
-
-const STATS = [
-  { label: 'Thanh vien', value: '2,400+', icon: Users, color: 'text-blue-400' },
-  { label: 'Bai review', value: '8,900+', icon: MessageSquare, color: 'text-amber-400' },
-  { label: 'Chu Phong Gym', value: '320+', icon: Dumbbell, color: 'text-emerald-400' },
-  { label: 'HLV PT', value: '150+', icon: Award, color: 'text-purple-400' },
-];
 
 export default function CommunityPage() {
   const { currentUser } = useAuth();
@@ -27,16 +20,35 @@ export default function CommunityPage() {
   const [bookingEquipment, setBookingEquipment] = useState<Equipment | null>(null);
   const [filter, setFilter] = useState<'all' | 'trending'>('all');
 
+  // Dynamic Community Stats from DB
+  const [stats, setStats] = useState({
+    membersCount: '2,400+',
+    reviewsCount: '8,900+',
+    gymOwnersCount: '320+',
+    ptsCount: '150+'
+  });
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       const userId = currentUser.role !== 'guest' ? currentUser.id : undefined;
-      const data = await fetchPosts(userId);
+      const [data, dbStats] = await Promise.all([
+        fetchPosts(userId),
+        fetchCommunityStats()
+      ]);
       setPosts(data);
+      setStats(dbStats);
       setLoading(false);
     };
     load();
   }, [currentUser.id]);
+
+  const STATS_ITEMS = [
+    { label: 'Thành viên', value: stats.membersCount, icon: Users, color: 'text-blue-400' },
+    { label: 'Bài review & Đánh giá', value: stats.reviewsCount, icon: MessageSquare, color: 'text-amber-400' },
+    { label: 'Chủ Phòng Gym', value: stats.gymOwnersCount, icon: Dumbbell, color: 'text-emerald-400' },
+    { label: 'HLV Cá Nhân (PT)', value: stats.ptsCount, icon: Award, color: 'text-purple-400' },
+  ];
 
   const filtered = filter === 'trending'
     ? posts.filter(p => p.likesCount >= 5)
@@ -56,17 +68,17 @@ export default function CommunityPage() {
         <div className="mb-8 text-center space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold">
             <Users className="w-3.5 h-3.5" />
-            CONG DONG GYMGEAR
+            CỘNG ĐỒNG GYMGEAR
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white">Hoi Chu Phong Gym & PT</h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-white">Hội Chủ Phòng Gym & HLV PT</h1>
           <p className="text-slate-400 text-sm max-w-xl mx-auto">
-            Noi chia se kinh nghiem mo phong gym, chon may tap chuyen nghiep va ket noi voi cac huan luyen vien hang dau.
+            Nơi chia sẻ kinh nghiệm mở phòng gym, chọn máy tập chuyên nghiệp và kết nối với các huấn luyện viên hàng đầu Việt Nam.
           </p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-          {STATS.map(stat => {
+          {STATS_ITEMS.map(stat => {
             const Icon = stat.icon;
             return (
               <div key={stat.label} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center space-y-1">
@@ -90,11 +102,12 @@ export default function CommunityPage() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              {f === 'all' ? 'Tat ca bai viet' : <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Noi bat</span>}
+              {f === 'all' ? 'Tất cả bài viết' : <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Nổi bật</span>}
             </button>
           ))}
-          <span className="ml-auto text-[11px] text-slate-400 font-mono">{filtered.length} bai viet</span>
+          <span className="ml-auto text-[11px] text-slate-400 font-mono">{filtered.length} bài viết</span>
         </div>
+
 
         {/* Posts feed */}
         {loading ? (
