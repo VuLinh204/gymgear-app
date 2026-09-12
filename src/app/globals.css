@@ -1,88 +1,266 @@
 @import "tailwindcss";
 
+@theme {
+  /* Facebook Primary Blue palette (Flat design, iconic #0866ff) */
+  --color-amber-50: #edf5ff;
+  --color-amber-100: #d8eaff;
+  --color-amber-200: #b9daff;
+  --color-amber-300: #88c2ff;
+  --color-amber-400: #0866ff;
+  --color-amber-500: #0866ff;
+  --color-amber-600: #0055d4;
+  --color-amber-700: #0048b8;
+  --color-amber-800: #003a94;
+  --color-amber-900: #002c73;
+  --color-amber-950: #001944;
+
+  /* Orange mapped identically to Facebook Blue to eliminate gradients */
+  --color-orange-50: #edf5ff;
+  --color-orange-100: #d8eaff;
+  --color-orange-200: #b9daff;
+  --color-orange-300: #88c2ff;
+  --color-orange-400: #0055d4;
+  --color-orange-500: #0866ff;
+  --color-orange-600: #0866ff;
+  --color-orange-700: #0048b8;
+  --color-orange-800: #003a94;
+  --color-orange-900: #002c73;
+  --color-orange-950: #001944;
+
+  /* Multi-color gradient stops */
+  --color-red-600: #0866ff;
+  --color-pink-500: #0866ff;
+  --color-rose-500: #0866ff;
+
+  /* Facebook Dark Mode Palette */
+  --color-slate-950: #18191a; /* FB Dark background */
+  --color-slate-900: #242526; /* FB Dark post/card surface */
+  --color-slate-800: #3a3b3c; /* FB Dark button/input surface */
+  --color-slate-700: #3e4042; /* FB Dark divider/border */
+  --color-slate-600: #4e4f50;
+  --color-slate-500: #8a8d91;
+  --color-slate-400: #b0b3b8; /* FB Dark secondary text */
+  --color-slate-300: #ced0d4;
+  --color-slate-200: #e4e6eb; /* FB Dark primary text */
+  --color-slate-100: #f0f2f5;
+}
+
 :root {
-  /* Softer dark base (muted navy instead of pure black) */
-  --background: #071026;
-  --foreground: #e6eef6;
-  --foreground-dim: #9fb0c2;
+  /* Facebook Dark Mode Base */
+  --background: #18191a;
+  --foreground: #e4e6eb;
+  --foreground-dim: #b0b3b8;
+  --accent-flat: #0866ff;
 }
 
-/* Light theme variables (apply by adding `theme-light` class on <html>) */
+/* Facebook Light Mode Base */
 .theme-light {
-  /* Muted light theme: off-white background and deep-blue foreground */
-  --background: #f3f6f9;
-  --foreground: #071026;
-  --foreground-dim: #475569;
+  --background: #f0f2f5;
+  --foreground: #050505;
+  --foreground-dim: #65676b;
+  --accent-flat: #0866ff;
 }
 
-/* Quick overrides for common Tailwind slate/bg/text utilities to approximate a light theme.
-   This is an incremental fix — for a robust solution, migrate color usage to CSS variables or
-   configure Tailwind's theming. */
+/* ── QUY TẮC BẮT BUỘC: NỀN XANH THÌ CHỮ PHẢI TRẮNG (#FFFFFF) ── */
+/* Chỉ áp dụng cho các phần tử có NỀN xanh (bg-amber-, from-amber-, to-amber-) */
+[class*="bg-amber-"],
+[class*="from-amber-"],
+[class*="to-amber-"],
+button[class*="from-amber-"],
+a[class*="from-amber-"],
+button[class*="bg-amber-"],
+a[class*="bg-amber-"],
+.btn-primary-blue {
+  color: #ffffff !important;
+  background-image: none !important;
+  background-color: #0866ff !important;
+}
+
+[class*="bg-amber-"]:hover,
+[class*="from-amber-"]:hover,
+button[class*="from-amber-"]:hover,
+a[class*="from-amber-"]:hover,
+button[class*="bg-amber-"]:hover,
+a[class*="bg-amber-"]:hover {
+  background-color: #0055d4 !important;
+  color: #ffffff !important;
+}
+
+/* Tất cả con (chữ, span, icon SVG) bên trong phần tử NỀN xanh ĐỀU PHẢI MÀU TRẮNG */
+[class*="bg-amber-"] *,
+[class*="from-amber-"] *,
+[class*="to-amber-"] *,
+button[class*="from-amber-"] *,
+a[class*="from-amber-"] *,
+button[class*="bg-amber-"] *,
+a[class*="bg-amber-"] * {
+  color: #ffffff !important;
+  stroke: #ffffff;
+}
+
+/* Fill icon svg màu trắng trên nền xanh */
+[class*="bg-amber-"] svg[class*="fill-"],
+[class*="from-amber-"] svg[class*="fill-"],
+[class*="bg-amber-"] [class*="fill-amber-"] {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+}
+
+/* Đảm bảo toàn bộ class text-slate-950 chuyển thành màu trắng */
+.text-slate-950,
+button.text-slate-950,
+a.text-slate-950,
+span.text-slate-950,
+div.text-slate-950 {
+  color: #ffffff !important;
+}
+
+/* Text selection: nền xanh chữ trắng chuẩn */
+::selection {
+  background-color: #0866ff !important;
+  color: #ffffff !important;
+}
+
+/* Flat Design Rules: No gradients, no blurry gradient blobs */
+.blur-3xl {
+  display: none !important;
+}
+
+[class*="shadow-orange-"],
+[class*="shadow-amber-"] {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Ensure text-clip gradients render as crisp flat Facebook Blue */
+.bg-clip-text {
+  background-image: none !important;
+  -webkit-text-fill-color: #0866ff !important;
+  color: #0866ff !important;
+}
+
+/* ── Dark Mode Contrast Hierarchy (Facebook Dark) ── */
+:root:not(.theme-light) body {
+  background-color: #18191a !important;
+  color: #e4e6eb !important;
+}
+
+/* Dark mode base and card surfaces */
+:root:not(.theme-light) .bg-slate-950 { background-color: #18191a !important; }
+:root:not(.theme-light) .bg-slate-900 { background-color: #242526 !important; }
+:root:not(.theme-light) .bg-slate-900\/90,
+:root:not(.theme-light) .bg-slate-900\/80 { background-color: #242526 !important; }
+:root:not(.theme-light) .bg-slate-800 { background-color: #3a3b3c !important; }
+:root:not(.theme-light) .border-slate-800,
+:root:not(.theme-light) .border-slate-700 { border-color: #3e4042 !important; }
+
+/* Dark mode text hierarchy */
+:root:not(.theme-light) .text-slate-100,
+:root:not(.theme-light) .text-slate-200 { color: #e4e6eb !important; }
+:root:not(.theme-light) .text-slate-300 { color: #ced0d4 !important; }
+:root:not(.theme-light) .text-slate-400 { color: #b0b3b8 !important; }
+
+/* Chữ / Link xanh trên nền tối (khi không có nền xanh) */
+:root:not(.theme-light) a[class*="text-amber-"]:not([class*="bg-amber-"]),
+:root:not(.theme-light) span[class*="text-amber-"]:not([class*="bg-amber-"]) {
+  color: #4599ff !important;
+}
+
+/* ── Facebook Light Mode Contrast Hierarchy ── */
 .theme-light body,
 .theme-light .min-h-screen,
 .theme-light .min-h-full {
-  background: var(--background) !important;
-  color: var(--foreground) !important;
-}
-.theme-light .bg-slate-950 { background-color: #f3f6f9 !important; }
-.theme-light .bg-slate-900 { background-color: #eef4f8 !important; }
-.theme-light .bg-slate-900\/90 { background-color: rgba(238,244,248,0.9) !important; }
-.theme-light .bg-slate-800 { background-color: #e6eef6 !important; }
-.theme-light .text-slate-100 { color: #071026 !important; }
-.theme-light .text-slate-200 { color: #071026 !important; }
-.theme-light .text-slate-300 { color: #071026 !important; }
-.theme-light .text-slate-400 { color: #334155 !important; }
-.theme-light .border-slate-800 { border-color: #d1dbe6 !important; }
-.theme-light .border-slate-700 { border-color: #d1dbe6 !important; }
-.theme-light .placeholder-slate-400 { color: #94a3b8 !important; }
-
-/* Broader attribute-based overrides to catch many Tailwind utility variants */
-.theme-light [class*="bg-slate-"] { background-color: var(--background) !important; }
-.theme-light [class*="text-slate-"] { color: var(--foreground) !important; }
-.theme-light .text-white { color: var(--foreground) !important; }
-.theme-light [class*="border-slate-"] { border-color: rgba(15,23,42,0.08) !important; }
-.theme-light [class*="placeholder-slate-"] { color: rgba(51,65,85,0.7) !important; }
-
-/* Inputs and textareas */
-.theme-light input, .theme-light textarea, .theme-light select {
-  /* slightly off-white inputs to reduce harsh contrast */
-  background-color: #f6f9fc !important;
-  color: var(--foreground) !important;
-  border-color: rgba(7,16,38,0.06) !important;
-}
-.theme-light input::placeholder, .theme-light textarea::placeholder { color: rgba(51,65,85,0.5) !important; }
-
-/* Buttons that use bg-slate-* classes */
-.theme-light button[class*="bg-slate-"] {
-  background-color: #eef4f8 !important;
-  color: var(--foreground) !important;
+  background-color: #f0f2f5 !important;
+  color: #050505 !important;
 }
 
-/* Improve contrast for amber/yellow accents in light theme */
-.theme-light .text-amber-400,
-.theme-light [class*="text-amber-"] {
-  color: #b75320 !important; /* slightly muted amber */
+/* Page base in light mode */
+.theme-light .bg-slate-950 {
+  background-color: #f0f2f5 !important;
 }
-.theme-light .fill-amber-400 { fill: #b75320 !important; }
-.theme-light .bg-amber-500 { background-color: #f97316 !important; }
-.theme-light .bg-amber-500\/10 { background-color: rgba(249,115,22,0.08) !important; }
-.theme-light .border-amber-500 { border-color: #f97316 !important; }
 
-/* Navbar in light mode */
+/* Post & Card surfaces in light mode: Clean Crisp White */
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-900\/90,
+.theme-light .bg-slate-900\/80 {
+  background-color: #ffffff !important;
+}
+
+/* Secondary buttons & inner containers */
+.theme-light .bg-slate-800 {
+  background-color: #e4e6eb !important;
+}
+
+/* Borders & dividers */
+.theme-light .border-slate-800,
+.theme-light .border-slate-700 {
+  border-color: #ced0d4 !important;
+}
+
+/* Text Hierarchy in Light Mode */
+.theme-light .text-slate-100,
+.theme-light .text-slate-200 {
+  color: #050505 !important;
+}
+.theme-light .text-slate-300 {
+  color: #1c1e21 !important;
+}
+.theme-light .text-slate-400 {
+  color: #65676b !important;
+}
+.theme-light .placeholder-slate-400,
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #8a8d91 !important;
+}
+
+/* Inputs in Light Mode */
+.theme-light input,
+.theme-light textarea,
+.theme-light select {
+  background-color: #f0f2f5 !important;
+  color: #050505 !important;
+  border-color: #ced0d4 !important;
+}
+
+/* Secondary Buttons in Light Mode */
+.theme-light button.bg-slate-800,
+.theme-light a.bg-slate-800 {
+  background-color: #e4e6eb !important;
+  color: #050505 !important;
+}
+
+.theme-light button.bg-slate-800:hover,
+.theme-light a.bg-slate-800:hover {
+  background-color: #d8dadf !important;
+}
+
+/* Header in Light Mode */
 .theme-light header[class*="bg-slate-"] {
-  background-color: rgba(243,246,249,0.95) !important;
-  border-color: rgba(15,23,42,0.08) !important;
+  background-color: #ffffff !important;
+  border-color: #ced0d4 !important;
 }
 
-/* Modal backdrop */
+/* Modal backdrop in Light Mode */
 .theme-light [class*="bg-black\/"] {
-  background-color: rgba(0,0,0,0.5) !important;
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Light mode subtle badge/box cards (/10, /20) */
+.theme-light [class*="from-amber-500/"],
+.theme-light [class*="bg-amber-500/"] {
+  background-image: none !important;
+  background-color: #e7f3ff !important;
+  border-color: #b9daff !important;
+}
+
+.theme-light [class*="text-amber-"] {
+  color: #0866ff !important;
 }
 
 /* Scrollbar in light mode */
-.theme-light ::-webkit-scrollbar-track { background: #e6eef6; }
-.theme-light ::-webkit-scrollbar-thumb { background: #94a3b8; }
-.theme-light ::-webkit-scrollbar-thumb:hover { background: #b75320; }
+.theme-light ::-webkit-scrollbar-track { background: #f0f2f5; }
+.theme-light ::-webkit-scrollbar-thumb { background: #ced0d4; }
+.theme-light ::-webkit-scrollbar-thumb:hover { background: #0866ff; }
 
 /* ── Ensure all interactive buttons, links, clickable tags have cursor: pointer ── */
 button:not(:disabled),
@@ -155,16 +333,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: #18191a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #3a3b3c;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #f59e0b;
+  background: #0866ff;
 }
 
 /* Utility: hide scrollbar but allow scrolling (for Stories strip) */
@@ -186,7 +364,7 @@ body {
 }
 .sidebar-scroll:hover {
   scrollbar-width: thin;
-  scrollbar-color: rgba(245, 158, 11, 0.35) transparent; /* Firefox */
+  scrollbar-color: rgba(8, 102, 255, 0.45) transparent; /* Firefox */
 }
 .sidebar-scroll:hover::-webkit-scrollbar {
   width: 4px;
@@ -199,7 +377,7 @@ body {
   border-radius: 999px;
 }
 .sidebar-scroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(245, 158, 11, 0.35);
+  background-color: rgba(8, 102, 255, 0.45);
   border-radius: 999px;
 }
 
