@@ -62,7 +62,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* ── Logo ─────────────────────────────────────────────────────── */}
           <div className="flex items-center gap-3 shrink-0">
             <Link href="/" className="flex items-center" aria-label="Go to homepage">
-              <img src={isLight ? '/LogoGymGearDark.png' : '/LogoGymGear.png'} alt="GymGear" className="h-10 object-contain" />
+              <img src="/LogoGymGear.png" alt="GymGear" className="h-10 object-contain dark-logo" />
+              <img src="/LogoGymGearDark.png" alt="GymGear" className="h-10 object-contain light-logo" />
             </Link>
           </div>
 
@@ -132,11 +133,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Book button (luôn hiển thị) */}
             <button
               onClick={onOpenBooking}
-              className="inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 text-xs font-bold text-slate-950 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 transition cursor-pointer shrink-0"
+              className="btn-theme-accent inline-flex items-center gap-1.5 px-3 lg:px-4 py-2 text-xs font-bold text-white rounded-xl shadow-md transition cursor-pointer shrink-0"
             >
-              <CalendarCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Đặt Lịch</span>
-              <span className="hidden xl:inline">Thử Máy</span>
+              <CalendarCheck className="w-4 h-4 text-white stroke-[2.5]" />
+              <span className="hidden sm:inline text-white font-bold">Đặt Lịch</span>
+              <span className="hidden xl:inline text-white font-bold">Thử Máy</span>
             </button>
 
             {/* Auth section */}

@@ -146,10 +146,10 @@ export default function ThemeSwitcherPopover() {
           <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <div
-                className="w-5 h-5 rounded-lg flex items-center justify-center text-white text-xs font-black shadow-inner"
+                className="theme-accent-check w-5 h-5 rounded-lg flex items-center justify-center text-white shadow-inner"
                 style={{ backgroundColor: currentThemeObj.accentColor }}
               >
-                ✓
+                <Check className="w-3.5 h-3.5 text-white stroke-[3]" style={{ stroke: '#ffffff', color: '#ffffff' }} />
               </div>
               <span className="text-xs font-bold text-white tracking-wide uppercase">
                 Bảng Màu Thể Hình
@@ -204,10 +204,10 @@ export default function ThemeSwitcherPopover() {
                   {/* Checkmark indicator */}
                   {isSelected && (
                     <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm"
-                      style={{ backgroundColor: theme.accentColor }}
+                      className="theme-accent-check w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm"
+                      style={{ backgroundColor: theme.accentColor, color: '#ffffff' }}
                     >
-                      <Check className="w-3 h-3 stroke-[3]" />
+                      <Check className="w-3 h-3 text-white stroke-[3]" style={{ stroke: '#ffffff', color: '#ffffff' }} />
                     </div>
                   )}
                 </button>

@@ -83,10 +83,10 @@ export const SocialSidebarRight: React.FC<SocialSidebarRightProps> = ({
         </p>
         <button
           onClick={() => onOpenBooking(null)}
-          className="w-full inline-flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-md shadow-orange-500/20 transition-all"
+          className="btn-theme-accent w-full inline-flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all cursor-pointer"
         >
-          <CalendarCheck className="w-4 h-4" />
-          <span>Đặt Lịch Ngay (Miễn Phí)</span>
+          <CalendarCheck className="w-4 h-4 text-white stroke-[2.5]" />
+          <span className="text-white font-bold">Đặt Lịch Ngay (Miễn Phí)</span>
         </button>
       </div>
 

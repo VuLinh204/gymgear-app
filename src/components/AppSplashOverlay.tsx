@@ -4,40 +4,36 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 export default function AppSplashOverlay() {
-  const [visible, setVisible] = useState(false);
+  // Always render true during SSR so the overlay is present in raw HTML at frame 0
+  const [visible, setVisible] = useState<boolean>(true);
   const [fadingOut, setFadingOut] = useState(false);
 
   useEffect(() => {
     try {
-      // Check if splash was already shown in this session
-      const alreadyShown = sessionStorage.getItem('gymgear-splash-shown');
-      if (alreadyShown) {
+      if (sessionStorage.getItem('gymgear-splash-shown')) {
+        setVisible(false);
         return;
       }
-
-      // Show splash
-      setVisible(true);
-
-      // Start fade out after 700ms
-      const fadeTimer = setTimeout(() => {
-        setFadingOut(true);
-      }, 700);
-
-      // Completely unmount after 1000ms and mark as shown
-      const unmountTimer = setTimeout(() => {
-        setVisible(false);
-        try {
-          sessionStorage.setItem('gymgear-splash-shown', 'true');
-        } catch {}
-      }, 1050);
-
-      return () => {
-        clearTimeout(fadeTimer);
-        clearTimeout(unmountTimer);
-      };
     } catch {
-      // Fallback safe for SSR / privacy modes
+      // ignore
     }
+
+    // First visit in this session: display for 1000ms, then fade out
+    const fadeTimer = setTimeout(() => {
+      setFadingOut(true);
+    }, 1000);
+
+    const unmountTimer = setTimeout(() => {
+      setVisible(false);
+      try {
+        sessionStorage.setItem('gymgear-splash-shown', 'true');
+      } catch {}
+    }, 1450);
+
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(unmountTimer);
+    };
   }, []);
 
   if (!visible) return null;
@@ -45,7 +41,7 @@ export default function AppSplashOverlay() {
   return (
     <div
       id="app-splash-overlay"
-      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-between py-12 px-6 bg-slate-950 transition-all duration-350 ease-out select-none pointer-events-auto ${
+      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-between py-12 px-6 transition-all duration-400 ease-out select-none pointer-events-auto ${
         fadingOut ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100 scale-100'
       }`}
       style={{

@@ -448,10 +448,10 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                 onClose();
                 onOpenBooking(equipment);
               }}
-              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-400 hover:to-orange-500 shadow-lg shadow-orange-500/25 transition-all"
+              className="btn-theme-accent w-full sm:w-auto flex-1 inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl text-xs font-bold text-white shadow-lg transition-all cursor-pointer"
             >
-              <CalendarCheck className="w-4 h-4" />
-              <span>Đặt Lịch Thử Máy Tại Showroom</span>
+              <CalendarCheck className="w-4 h-4 text-white stroke-[2.5]" />
+              <span className="text-white font-bold">Đặt Lịch Thử Máy Tại Showroom</span>
             </button>
           </div>
         </div>

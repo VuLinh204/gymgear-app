@@ -237,7 +237,7 @@ function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
 
       {/* Navbar */}
       <Navbar

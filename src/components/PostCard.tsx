@@ -830,9 +830,10 @@ export const PostCard: React.FC<PostCardProps> = ({
 
               <button
                 onClick={() => onBookEquipment(post.taggedEquipment!)}
-                className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                className="btn-theme-accent w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold text-white shadow-md transition-all cursor-pointer"
               >
-                <CalendarCheck className="w-3.5 h-3.5" /> Đặt Lịch Thử Máy (Free)
+                <CalendarCheck className="w-3.5 h-3.5 text-white stroke-[2.5]" />
+                <span className="text-white font-bold">Đặt Lịch Thử Máy (Free)</span>
               </button>
             </div>
           </div>

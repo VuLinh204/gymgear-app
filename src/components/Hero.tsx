@@ -58,10 +58,10 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onScrollToCatalog }) 
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-3 sm:space-y-0 sm:space-x-4 pt-4">
               <button
                 onClick={onOpenBooking}
-                className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-8 py-3.5 text-base font-bold text-white rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:from-amber-400 hover:to-orange-500 shadow-xl shadow-orange-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                className="btn-theme-accent w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-8 py-3.5 text-base font-bold text-white rounded-xl shadow-xl transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
               >
-                <span>Đặt Lịch Thử Máy Trực Tiếp</span>
-                <ArrowRight className="w-5 h-5" />
+                <span className="text-white font-bold">Đặt Lịch Thử Máy Trực Tiếp</span>
+                <ArrowRight className="w-5 h-5 text-white" />
               </button>
 
               <button

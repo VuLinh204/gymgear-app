@@ -177,8 +177,8 @@ export default function ShowroomPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 pt-1">
-                  <button onClick={() => setBookingOpen(true)} className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 transition shadow-md">
-                    <CalendarCheck className="w-4 h-4 text-slate-950" /> Đặt Lịch Thử Máy Miễn Phí
+                  <button onClick={() => setBookingOpen(true)} className="btn-theme-accent flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-white transition shadow-md cursor-pointer">
+                    <CalendarCheck className="w-4 h-4 text-white stroke-[2.5]" /> Đặt Lịch Thử Máy Miễn Phí
                   </button>
                   <a href={`https://maps.google.com/?q=${encodeURIComponent(showroom.address)}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5" /> Chỉ đường

@@ -135,7 +135,7 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
 
             <button
               onClick={onOpenBooking}
-              className="w-full py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl shadow-md transition-all"
+              className="btn-theme-accent w-full py-2 text-xs font-bold text-white rounded-xl shadow-md transition-all cursor-pointer"
             >
               + Đặt Lịch Thử Máy (Free)
             </button>

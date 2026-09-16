@@ -25,6 +25,9 @@ export default function RootLayout({
               if(dt) document.documentElement.setAttribute('data-theme', dt);
               var t = localStorage.getItem('theme');
               if(t === 'light') document.documentElement.classList.add('theme-light');
+              if(sessionStorage.getItem('gymgear-splash-shown')) {
+                document.documentElement.classList.add('splash-already-shown');
+              }
             }catch(e){}
           })();
         `}} />

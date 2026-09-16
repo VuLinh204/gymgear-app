@@ -13,7 +13,8 @@ export const Footer: React.FC = () => {
           {/* Col 1: Brand (minimal) */}
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <img src="/LogoGymGear.png" alt="GymGear" className="h-10 object-contain" />
+              <img src="/LogoGymGear.png" alt="GymGear" className="h-10 object-contain dark-logo" />
+              <img src="/LogoGymGearDark.png" alt="GymGear" className="h-10 object-contain light-logo" />
             </div>
             <p className="text-sm text-slate-400">Chọn máy chuẩn — Tập luyện an toàn</p>
           </div>
