@@ -7,6 +7,7 @@ import {
 import Link from 'next/link';
 import NotificationDropdown from './NotificationDropdown';
 import GoogleTranslator from './GoogleTranslator';
+import ThemeSwitcherPopover from './ThemeSwitcherPopover';
 
 interface NavbarProps {
   onSearch: (query: string) => void;
@@ -125,14 +126,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Notification dropdown */}
             <NotificationDropdown onOpenBooking={() => onOpenBooking()} />
 
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-amber-400 hover:bg-slate-800 transition cursor-pointer"
-              aria-label="Toggle theme"
-            >
-              {isLight ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
-            </button>
+            {/* OriginKit Theme Switcher Popover */}
+            <ThemeSwitcherPopover />
 
             {/* Book button (luôn hiển thị) */}
             <button

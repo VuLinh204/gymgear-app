@@ -45,24 +45,75 @@
   --color-slate-100: #f0f2f5;
 }
 
-:root {
-  /* Facebook Dark Mode Base */
+:root,
+[data-theme="meta-blue"] {
+  /* Theme 1: Royal Meta (Facebook Blue) */
+  --theme-accent: #0866ff;
+  --theme-accent-hover: #0055d4;
+  --theme-accent-sub: #4599ff;
+  --theme-accent-text: #ffffff;
+  --theme-bg: #18191a;
+  --theme-card: #242526;
+  --theme-secondary: #3a3b3c;
+  --theme-border: #3e4042;
+  --theme-text-primary: #e4e6eb;
+  --theme-text-secondary: #b0b3b8;
   --background: #18191a;
   --foreground: #e4e6eb;
   --foreground-dim: #b0b3b8;
   --accent-flat: #0866ff;
 }
 
-/* Facebook Light Mode Base */
+[data-theme="cyber-volt"] {
+  /* Theme 2: Cyber Volt (Athletic Volt / Hyper Green) */
+  --theme-accent: #10b981;
+  --theme-accent-hover: #059669;
+  --theme-accent-sub: #34d399;
+  --theme-accent-text: #ffffff;
+  --theme-bg: #0b0d11;
+  --theme-card: #131720;
+  --theme-secondary: #1d222e;
+  --theme-border: #1f2633;
+  --theme-text-primary: #f0fdf4;
+  --theme-text-secondary: #94a3b8;
+  --background: #0b0d11;
+  --foreground: #f0fdf4;
+  --foreground-dim: #94a3b8;
+  --accent-flat: #10b981;
+}
+
+[data-theme="crimson-pulse"] {
+  /* Theme 3: Crimson Pulse (Heavy Cast Iron & Blaze) */
+  --theme-accent: #ef4444;
+  --theme-accent-hover: #dc2626;
+  --theme-accent-sub: #f87171;
+  --theme-accent-text: #ffffff;
+  --theme-bg: #0e0e10;
+  --theme-card: #18181c;
+  --theme-secondary: #26262f;
+  --theme-border: #2b2b33;
+  --theme-text-primary: #fef2f2;
+  --theme-text-secondary: #a1a1aa;
+  --background: #0e0e10;
+  --foreground: #fef2f2;
+  --foreground-dim: #a1a1aa;
+  --accent-flat: #ef4444;
+}
+
+/* Light Mode Base for all 3 Themes */
 .theme-light {
+  --theme-bg: #f0f2f5;
+  --theme-card: #ffffff;
+  --theme-secondary: #e4e6eb;
+  --theme-border: #ced0d4;
+  --theme-text-primary: #050505;
+  --theme-text-secondary: #65676b;
   --background: #f0f2f5;
   --foreground: #050505;
   --foreground-dim: #65676b;
-  --accent-flat: #0866ff;
 }
 
-/* ── QUY TẮC BẮT BUỘC: NỀN XANH THÌ CHỮ PHẢI TRẮNG (#FFFFFF) ── */
-/* Chỉ áp dụng cho các phần tử có NỀN xanh (bg-amber-, from-amber-, to-amber-) */
+/* ── QUY TẮC BẮT BUỘC: NỀN MÀU ACCENT THÌ CHỮ PHẢI TRẮNG 100% (#FFFFFF) ── */
 [class*="bg-amber-"],
 [class*="from-amber-"],
 [class*="to-amber-"],
@@ -70,10 +121,11 @@ button[class*="from-amber-"],
 a[class*="from-amber-"],
 button[class*="bg-amber-"],
 a[class*="bg-amber-"],
-.btn-primary-blue {
-  color: #ffffff !important;
+.btn-primary-blue,
+.btn-theme-accent {
+  color: var(--theme-accent-text, #ffffff) !important;
   background-image: none !important;
-  background-color: #0866ff !important;
+  background-color: var(--theme-accent) !important;
 }
 
 [class*="bg-amber-"]:hover,
@@ -81,29 +133,33 @@ a[class*="bg-amber-"],
 button[class*="from-amber-"]:hover,
 a[class*="from-amber-"]:hover,
 button[class*="bg-amber-"]:hover,
-a[class*="bg-amber-"]:hover {
-  background-color: #0055d4 !important;
-  color: #ffffff !important;
+a[class*="bg-amber-"]:hover,
+.btn-primary-blue:hover,
+.btn-theme-accent:hover {
+  background-color: var(--theme-accent-hover) !important;
+  color: var(--theme-accent-text, #ffffff) !important;
 }
 
-/* Tất cả con (chữ, span, icon SVG) bên trong phần tử NỀN xanh ĐỀU PHẢI MÀU TRẮNG */
+/* Tất cả con (chữ, span, icon SVG) bên trong phần tử NỀN ACCENT ĐỀU PHẢI MÀU TRẮNG */
 [class*="bg-amber-"] *,
 [class*="from-amber-"] *,
 [class*="to-amber-"] *,
 button[class*="from-amber-"] *,
 a[class*="from-amber-"] *,
 button[class*="bg-amber-"] *,
-a[class*="bg-amber-"] * {
-  color: #ffffff !important;
-  stroke: #ffffff;
+a[class*="bg-amber-"] *,
+.btn-primary-blue *,
+.btn-theme-accent * {
+  color: var(--theme-accent-text, #ffffff) !important;
+  stroke: var(--theme-accent-text, #ffffff);
 }
 
-/* Fill icon svg màu trắng trên nền xanh */
+/* Fill icon svg màu trắng trên nền màu */
 [class*="bg-amber-"] svg[class*="fill-"],
 [class*="from-amber-"] svg[class*="fill-"],
 [class*="bg-amber-"] [class*="fill-amber-"] {
-  fill: #ffffff !important;
-  color: #ffffff !important;
+  fill: var(--theme-accent-text, #ffffff) !important;
+  color: var(--theme-accent-text, #ffffff) !important;
 }
 
 /* Đảm bảo toàn bộ class text-slate-950 chuyển thành màu trắng */
@@ -115,10 +171,10 @@ div.text-slate-950 {
   color: #ffffff !important;
 }
 
-/* Text selection: nền xanh chữ trắng chuẩn */
+/* Text selection: nền accent chữ trắng chuẩn */
 ::selection {
-  background-color: #0866ff !important;
-  color: #ffffff !important;
+  background-color: var(--theme-accent) !important;
+  color: var(--theme-accent-text, #ffffff) !important;
 }
 
 /* Flat Design Rules: No gradients, no blurry gradient blobs */
@@ -131,38 +187,38 @@ div.text-slate-950 {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Ensure text-clip gradients render as crisp flat Facebook Blue */
+/* Ensure text-clip gradients render as crisp flat Accent */
 .bg-clip-text {
   background-image: none !important;
-  -webkit-text-fill-color: #0866ff !important;
-  color: #0866ff !important;
+  -webkit-text-fill-color: var(--theme-accent) !important;
+  color: var(--theme-accent) !important;
 }
 
-/* ── Dark Mode Contrast Hierarchy (Facebook Dark) ── */
+/* ── Dark Mode Contrast Hierarchy (Adapts to Active Theme) ── */
 :root:not(.theme-light) body {
-  background-color: #18191a !important;
-  color: #e4e6eb !important;
+  background-color: var(--theme-bg, #18191a) !important;
+  color: var(--theme-text-primary, #e4e6eb) !important;
 }
 
 /* Dark mode base and card surfaces */
-:root:not(.theme-light) .bg-slate-950 { background-color: #18191a !important; }
-:root:not(.theme-light) .bg-slate-900 { background-color: #242526 !important; }
+:root:not(.theme-light) .bg-slate-950 { background-color: var(--theme-bg, #18191a) !important; }
+:root:not(.theme-light) .bg-slate-900 { background-color: var(--theme-card, #242526) !important; }
 :root:not(.theme-light) .bg-slate-900\/90,
-:root:not(.theme-light) .bg-slate-900\/80 { background-color: #242526 !important; }
-:root:not(.theme-light) .bg-slate-800 { background-color: #3a3b3c !important; }
+:root:not(.theme-light) .bg-slate-900\/80 { background-color: var(--theme-card, #242526) !important; }
+:root:not(.theme-light) .bg-slate-800 { background-color: var(--theme-secondary, #3a3b3c) !important; }
 :root:not(.theme-light) .border-slate-800,
-:root:not(.theme-light) .border-slate-700 { border-color: #3e4042 !important; }
+:root:not(.theme-light) .border-slate-700 { border-color: var(--theme-border, #3e4042) !important; }
 
 /* Dark mode text hierarchy */
 :root:not(.theme-light) .text-slate-100,
-:root:not(.theme-light) .text-slate-200 { color: #e4e6eb !important; }
+:root:not(.theme-light) .text-slate-200 { color: var(--theme-text-primary, #e4e6eb) !important; }
 :root:not(.theme-light) .text-slate-300 { color: #ced0d4 !important; }
-:root:not(.theme-light) .text-slate-400 { color: #b0b3b8 !important; }
+:root:not(.theme-light) .text-slate-400 { color: var(--theme-text-secondary, #b0b3b8) !important; }
 
-/* Chữ / Link xanh trên nền tối (khi không có nền xanh) */
+/* Chữ / Link accent trên nền tối (khi không có nền accent) */
 :root:not(.theme-light) a[class*="text-amber-"]:not([class*="bg-amber-"]),
 :root:not(.theme-light) span[class*="text-amber-"]:not([class*="bg-amber-"]) {
-  color: #4599ff !important;
+  color: var(--theme-accent-sub, #4599ff) !important;
 }
 
 /* ── Facebook Light Mode Contrast Hierarchy ── */

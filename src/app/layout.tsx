@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import AppSplashOverlay from "@/components/AppSplashOverlay";
 
 export const metadata: Metadata = {
   title: "GymGear - Mạng Xã Hội Review & Booking Máy Tập Gym",
@@ -20,6 +21,8 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
             try{
+              var dt = localStorage.getItem('gymgear-theme');
+              if(dt) document.documentElement.setAttribute('data-theme', dt);
               var t = localStorage.getItem('theme');
               if(t === 'light') document.documentElement.classList.add('theme-light');
             }catch(e){}
@@ -27,6 +30,7 @@ export default function RootLayout({
         `}} />
       </head>
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100" suppressHydrationWarning>
+        <AppSplashOverlay />
         <AuthProvider>
           {/* suppressHydrationWarning prevents Google Translate <font> injection from crashing React */}
           <div id="app-root" suppressHydrationWarning>
