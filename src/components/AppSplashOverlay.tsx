@@ -18,17 +18,17 @@ export default function AppSplashOverlay() {
       // ignore
     }
 
-    // First visit in this session: display for 1000ms, then fade out
+    // First visit in this session: display for 750ms, then fade out
     const fadeTimer = setTimeout(() => {
       setFadingOut(true);
-    }, 1000);
+    }, 750);
 
     const unmountTimer = setTimeout(() => {
       setVisible(false);
       try {
         sessionStorage.setItem('gymgear-splash-shown', 'true');
       } catch {}
-    }, 1450);
+    }, 1150);
 
     return () => {
       clearTimeout(fadeTimer);
@@ -58,35 +58,37 @@ export default function AppSplashOverlay() {
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
           {/* Subtle ambient aura */}
           <div
-            className="absolute inset-0 rounded-full blur-xl opacity-40 animate-pulse"
+            className="splash-aura absolute inset-0 rounded-full blur-xl opacity-30 animate-pulse"
             style={{ backgroundColor: 'var(--theme-accent, #0866FF)' }}
           />
 
-          {/* Logo Frame */}
-          <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 p-2 rounded-2xl bg-slate-900/90 border border-slate-700/60 shadow-2xl flex items-center justify-center animate-bounce duration-1000">
-            <Image
+          {/* Logo Frame with Dual Dark/Light Logo */}
+          <div className="splash-logo-card relative z-10 w-20 h-20 sm:w-24 sm:h-24 p-2 rounded-2xl bg-slate-900/90 border border-slate-700/60 shadow-2xl flex items-center justify-center animate-bounce duration-1000">
+            <img
               src="/LogoGymGear.png"
               alt="GymGear Logo"
-              width={80}
-              height={80}
-              priority
-              className="object-contain drop-shadow-md"
+              className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md dark-logo"
+            />
+            <img
+              src="/LogoGymGearDark.png"
+              alt="GymGear Logo"
+              className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md light-logo"
             />
           </div>
         </div>
 
         {/* Brand Name & Tagline */}
         <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-wider text-white uppercase flex items-center justify-center gap-1.5 font-sans">
+          <h1 className="splash-brand-title text-2xl sm:text-3xl font-black tracking-wider uppercase flex items-center justify-center gap-1.5 font-sans">
             GYM<span style={{ color: 'var(--theme-accent, #0866FF)' }}>GEAR</span>
           </h1>
-          <p className="text-xs sm:text-sm font-medium text-slate-400 max-w-xs">
+          <p className="splash-tagline text-xs sm:text-sm font-medium text-slate-400 max-w-xs">
             Mạng Xã Hội Review & Booking Máy Tập Gym
           </p>
         </div>
 
         {/* Dynamic Launch Progress Runner */}
-        <div className="w-36 h-1 rounded-full bg-slate-800/80 overflow-hidden relative mt-4">
+        <div className="splash-runner-track w-36 h-1 rounded-full bg-slate-800/80 overflow-hidden relative mt-4">
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
@@ -99,10 +101,10 @@ export default function AppSplashOverlay() {
 
       {/* Footer Meta Style */}
       <div className="flex flex-col items-center space-y-1 text-center">
-        <span className="text-[10px] tracking-widest uppercase font-semibold text-slate-500">
+        <span className="splash-footer-sub text-[10px] tracking-widest uppercase font-semibold text-slate-500">
           from
         </span>
-        <span className="text-xs font-bold tracking-wider text-slate-300">
+        <span className="splash-footer-text text-xs font-bold tracking-wider text-slate-300">
           GYMGEAR COMMUNITY
         </span>
       </div>

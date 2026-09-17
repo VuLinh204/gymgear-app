@@ -226,28 +226,30 @@ export default function ThemeSwitcherPopover() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-950/90 border border-slate-800">
+            <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-950/90 border border-slate-800 theme-switcher-segmented">
               <button
+                type="button"
                 onClick={() => toggleMode(false)}
                 className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   !isLight
-                    ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10 theme-mode-active'
+                    : 'text-slate-400 hover:text-white theme-mode-inactive'
                 }`}
               >
-                <Moon className="w-3.5 h-3.5" />
+                <Moon className={`w-3.5 h-3.5 transition-colors ${!isLight ? 'text-white' : 'text-slate-400'}`} />
                 <span>Tối</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => toggleMode(true)}
                 className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   isLight
-                    ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10 theme-mode-active'
+                    : 'text-slate-400 hover:text-white theme-mode-inactive'
                 }`}
               >
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <Sun className={`w-3.5 h-3.5 transition-colors ${isLight ? 'text-amber-500 fill-amber-500/20' : 'text-amber-400'}`} />
                 <span>Sáng</span>
               </button>
             </div>

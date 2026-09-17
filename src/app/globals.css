@@ -124,6 +124,44 @@ html.splash-already-shown #app-splash-overlay {
   display: none !important;
 }
 
+#app-splash-overlay {
+  background-color: var(--theme-bg, #18191a) !important;
+}
+
+.theme-light #app-splash-overlay {
+  background-color: #f0f2f5 !important;
+}
+
+.theme-light #app-splash-overlay .splash-logo-card {
+  background-color: #ffffff !important;
+  border-color: #ced0d4 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+}
+
+.theme-light #app-splash-overlay .splash-brand-title {
+  color: #050505 !important;
+}
+
+.theme-light #app-splash-overlay .splash-tagline {
+  color: #65676b !important;
+}
+
+.theme-light #app-splash-overlay .splash-runner-track {
+  background-color: #e4e6eb !important;
+}
+
+.theme-light #app-splash-overlay .splash-footer-text {
+  color: #65676b !important;
+}
+
+.theme-light #app-splash-overlay .splash-footer-sub {
+  color: #8a8d91 !important;
+}
+
+.theme-light #app-splash-overlay .splash-aura {
+  opacity: 0.15 !important;
+}
+
 /* ── QUY TẮC BẮT BUỘC: NỀN MÀU ACCENT THÌ CHỮ PHẢI TRẮNG 100% (#FFFFFF) ── */
 .btn-theme-accent,
 .btn-primary-blue,
@@ -386,13 +424,63 @@ button.btn-theme-accent *,
 .theme-light .btn-theme-accent,
 .theme-light .btn-theme-accent *,
 .theme-light header .btn-theme-accent,
-.theme-light header .btn-theme-accent *,
-[role="dialog"] [class*="rounded-full"] svg,
-[role="dialog"] [class*="rounded-full"] svg *,
-[role="dialog"] [class*="rounded-lg"] svg,
-[role="dialog"] [class*="rounded-lg"] svg * {
+.theme-light header .btn-theme-accent * {
   color: #ffffff !important;
   stroke: #ffffff !important;
+}
+/* ── OriginKit Theme Mode Switcher Segmented Control ── */
+.theme-light .theme-switcher-segmented {
+  background-color: #e4e6eb !important;
+  border-color: #ced0d4 !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-active {
+  background-color: #ffffff !important;
+  color: #050505 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-active span {
+  color: #050505 !important;
+  font-weight: 700 !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-active svg {
+  color: #1c1e21 !important;
+  stroke: #1c1e21 !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-active svg[class*="text-amber"] {
+  color: #d97706 !important;
+  stroke: #d97706 !important;
+  fill: rgba(217, 119, 6, 0.15) !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-inactive {
+  background-color: transparent !important;
+  color: #65676b !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-inactive span {
+  color: #65676b !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-inactive svg {
+  color: #65676b !important;
+  stroke: #65676b !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-inactive:hover {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.theme-light .theme-switcher-segmented .theme-mode-inactive:hover span,
+.theme-light .theme-switcher-segmented .theme-mode-inactive:hover svg {
+  color: #050505 !important;
+  stroke: #050505 !important;
 }
 
 /* ── THEME ACCENT CHECK INDICATOR: Icon check trong bộ chọn theme PHẢI LUÔN TRẮNG ── */
