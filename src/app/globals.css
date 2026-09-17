@@ -290,7 +290,8 @@ html.theme-light {
   color: #8a8d91 !important;
 }
 
-.theme-light .text-white:not(.btn-theme-accent):not(.btn-theme-accent *):not(button *):not([class*="btn-"] *):not([class*="bg-amber-"]):not([class*="from-amber-"]):not([class*="bg-red-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="from-red-"]):not([class*="from-orange-"]):not([class*="bg-rose-"]) {
+/* text-white → #050505 trong light mode, TRỪ: con của accent buttons/divs */
+.theme-light .text-white:not(.btn-theme-accent):not(.btn-theme-accent *):not([class*="from-amber-"] *):not([class*="from-orange-"] *):not([class*="from-red-"] *):not([class*="bg-amber-"]):not([class*="from-amber-"]):not([class*="bg-red-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="from-red-"]):not([class*="from-orange-"]):not([class*="bg-rose-"]):not(.theme-accent-check):not(.theme-accent-check *) {
   color: #050505 !important;
 }
 
@@ -325,6 +326,28 @@ html.theme-light {
 .theme-light .bg-slate-700,
 .theme-light [class*="bg-slate-700"] {
   background-color: #d8dadf !important;
+}
+
+/* ── Gradient divs kết thúc bằng màu tối (to-slate-*) → render sáng trong light mode ── */
+/* Vd: SocialSidebarRight booking CTA: from-amber-500/20 via-orange-600/20 to-slate-900 */
+.theme-light div[class*="from-amber-"][class*="to-slate-"],
+.theme-light div[class*="from-orange-"][class*="to-slate-"],
+.theme-light div[class*="from-red-"][class*="to-slate-"],
+.theme-light section[class*="from-amber-"][class*="to-slate-"] {
+  background-image: linear-gradient(135deg, rgba(8, 102, 255, 0.08) 0%, rgba(8, 102, 255, 0.04) 60%, #e4e6eb 100%) !important;
+  border-color: #b9daff !important;
+}
+
+/* Text trong gradient divs tối → đảm bảo chữ đen trong light mode */
+.theme-light div[class*="from-amber-"][class*="to-slate-"] h1,
+.theme-light div[class*="from-amber-"][class*="to-slate-"] h2,
+.theme-light div[class*="from-amber-"][class*="to-slate-"] h3,
+.theme-light div[class*="from-amber-"][class*="to-slate-"] h4,
+.theme-light div[class*="from-amber-"][class*="to-slate-"] p,
+.theme-light div[class*="from-amber-"][class*="to-slate-"] span:not(.btn-theme-accent):not(.btn-theme-accent *),
+.theme-light div[class*="from-orange-"][class*="to-slate-"] h4,
+.theme-light div[class*="from-orange-"][class*="to-slate-"] p {
+  color: #050505 !important;
 }
 
 /* Header */
@@ -409,21 +432,31 @@ button.btn-theme-accent *,
 
 /* Interactive elements: standard buttons & links */
 .theme-light button:not(.btn-theme-accent):not([class*="from-amber-"]):not([class*="bg-amber-500"]):not([class*="bg-amber-600"]):not([class*="from-orange-"]):not([class*="bg-red-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]) {
-  color: #1c1e21;
+  color: #1c1e21 !important;
 }
 
 .theme-light button:not(.btn-theme-accent):not([class*="from-amber-"]):not([class*="bg-amber-500"]):not([class*="bg-amber-600"]):not([class*="from-orange-"]):not([class*="bg-red-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]) span {
-  color: #1c1e21;
+  color: #1c1e21 !important;
+}
+
+/* text-white con của button thường → đổi thành tối trong light mode */
+.theme-light button:not(.btn-theme-accent):not([class*="from-amber-"]):not([class*="bg-amber-500"]):not([class*="bg-amber-600"]):not([class*="from-orange-"]):not([class*="bg-red-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]) .text-white {
+  color: #1c1e21 !important;
 }
 
 .theme-light button:not(.btn-theme-accent):not([class*="from-amber-"]):not([class*="bg-amber-500"]):not([class*="bg-amber-600"]):not([class*="from-orange-"]):not([class*="bg-red-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]) svg {
-  stroke: #65676b;
-  color: #65676b;
+  stroke: #65676b !important;
+  color: #65676b !important;
 }
 
 .theme-light button:not(.btn-theme-accent):not([class*="from-amber-"]):not([class*="bg-amber-500"]):not([class*="bg-amber-600"]):not([class*="from-orange-"]):not([class*="bg-red-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]):hover svg {
-  stroke: #050505;
-  color: #050505;
+  stroke: #050505 !important;
+  color: #050505 !important;
+}
+
+/* Link buttons (a tag) không phải accent: đảm bảo text tối trong light mode */
+.theme-light a:not(.btn-theme-accent):not([class*="from-amber-"]):not([class*="bg-amber-"]):not([class*="bg-blue-"]):not([class*="bg-emerald-"]):not([class*="bg-red-"]) {
+  color: #1c1e21;
 }
 
 /* Post action buttons (Like, comment, share, bookmark) */
