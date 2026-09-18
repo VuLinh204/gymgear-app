@@ -112,7 +112,30 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      console.error('AI provider error:', response.status, await response.text());
+      const providerError = await response.text();
+      console.error('AI provider error:', response.status, providerError);
+
+      if (response.status === 401 || response.status === 403) {
+        return NextResponse.json(
+          { error: 'Khóa AI bị từ chối. Hãy kiểm tra API key và AI_BASE_URL trên Vercel.' },
+          { status: 502 }
+        );
+      }
+
+      if (response.status === 404) {
+        return NextResponse.json(
+          { error: 'Không tìm thấy endpoint hoặc model AI. Hãy kiểm tra AI_BASE_URL và AI_MODEL trên Vercel.' },
+          { status: 502 }
+        );
+      }
+
+      if (response.status === 429) {
+        return NextResponse.json(
+          { error: 'AI đã vượt hạn mức sử dụng. Vui lòng kiểm tra quota hoặc billing của nhà cung cấp.' },
+          { status: 429 }
+        );
+      }
+
       return NextResponse.json({ error: 'AI tạm thời không phản hồi. Vui lòng thử lại sau.' }, { status: 502 });
     }
 
