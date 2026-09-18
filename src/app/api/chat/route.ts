@@ -73,6 +73,19 @@ function jsonResponse(data: unknown, status = 200): NextResponse {
   });
 }
 
+async function fetchWithProviderRetry(url: string, init: RequestInit): Promise<Response> {
+  const retryDelays = [0, 700, 1500];
+  let response: Response | undefined;
+
+  for (const delay of retryDelays) {
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    response = await fetch(url, { ...init, signal: AbortSignal.timeout(30000) });
+    if (![429, 500, 502, 503, 504].includes(response.status)) return response;
+  }
+
+  return response!;
+}
+
 const SYSTEM_PROMPT = `Bạn là GymGear AI Assistant, một tư vấn viên thân thiện và am hiểu. Hãy trò chuyện tự nhiên như một người thật đang tư vấn, không trả lời theo kiểu máy móc hoặc liệt kê dữ liệu khô cứng. Luôn trả lời người dùng bằng tiếng Việt có đầy đủ dấu, rõ ràng và tự nhiên. Không được viết tiếng Việt không dấu; ví dụ phải viết "Chào bạn, máy tập có sẵn" thay vì "Chao ban, may tap co san". Chỉ giữ nguyên tiếng Anh đối với tên thương hiệu, model, thuật ngữ kỹ thuật hoặc khi người dùng yêu cầu rõ ràng một ngôn ngữ khác.
 
 Quy tắc bắt buộc:
@@ -114,7 +127,7 @@ export async function POST(request: Request) {
       const baseUrl = (configuredBaseUrl && !configuredBaseUrl.includes('openai.com')
         ? configuredBaseUrl
         : 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
-      response = await fetch(`${baseUrl}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      response = await fetchWithProviderRetry(`${baseUrl}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,7 +138,7 @@ export async function POST(request: Request) {
       });
     } else {
       const baseUrl = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
-      response = await fetch(`${baseUrl}/chat/completions`, {
+      response = await fetchWithProviderRetry(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -162,6 +175,13 @@ export async function POST(request: Request) {
         return jsonResponse(
           { error: 'AI đã vượt hạn mức sử dụng. Vui lòng kiểm tra quota hoặc billing của nhà cung cấp.' },
           429
+        );
+      }
+
+      if (response.status === 503 || response.status === 500 || response.status === 502 || response.status === 504) {
+        return jsonResponse(
+          { error: 'Google Gemini đang quá tải hoặc tạm thời gián đoạn. Hệ thống đã thử lại, vui lòng chờ một chút rồi gửi lại câu hỏi.' },
+          503
         );
       }
 
