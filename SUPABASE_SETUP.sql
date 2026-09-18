@@ -454,4 +454,79 @@ DO $$ BEGIN
   CREATE POLICY "bookings_update_all" ON public.bookings FOR UPDATE USING (true);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- ============================================================
+-- PHẦN 16: BẢNG AI_KNOWLEDGE_DOCS (Kho Tri Thức Cho Chatbot AI)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.ai_knowledge_docs (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'custom',
+  content TEXT NOT NULL,
+  keywords JSONB DEFAULT '[]'::jsonb,
+  author_name TEXT DEFAULT 'Admin GymGear',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
+ALTER TABLE public.ai_knowledge_docs ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "ai_knowledge_docs_select_all" ON public.ai_knowledge_docs FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "ai_knowledge_docs_insert_all" ON public.ai_knowledge_docs FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "ai_knowledge_docs_update_all" ON public.ai_knowledge_docs FOR UPDATE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE POLICY "ai_knowledge_docs_delete_all" ON public.ai_knowledge_docs FOR DELETE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Seed dữ liệu kho tri thức mẫu ban đầu
+INSERT INTO public.ai_knowledge_docs (id, title, category, content, keywords, author_name)
+VALUES
+  (
+    'doc-ppl-schedule',
+    'Cẩm nang Lịch tập Push-Pull-Legs (PPL) Chuẩn Khoa Học',
+    'workout',
+    'Lịch tập Push-Pull-Legs (PPL) là phương pháp tối ưu hóa khối lượng cơ bắp (Hypertrophy) hàng đầu: Buổi 1 (Push - Đẩy) tập Ngực/Vai/Tay Sau; Buổi 2 (Pull - Kéo) tập Lưng xô/Vai sau/Tay Trước; Buổi 3 (Legs) tập Đùi trước/sau/Bắp chân/Bụng. Nghỉ 1 ngày hoặc lặp lại chu kỳ 6 buổi/tuần.',
+    '["lịch tập", "push pull legs", "ppl", "ngực", "lưng", "chân", "tăng cơ"]'::jsonb,
+    'Master Trainer GymGear'
+  ),
+  (
+    'doc-showroom-policy',
+    'Quy Trình & Chính Sách Đặt Lịch Trải Nghiệm Showroom 0đ',
+    'policy',
+    'Chính sách thử máy tại hệ thống Showroom GymGear: Chi phí hoàn toàn MIỄN PHÍ (0đ) cho mọi khách hàng. Khách được trực tiếp trải nghiệm máy tập với sự hướng dẫn 1-1 của Chuyên viên kỹ thuật & Master Trainer. Showroom Hà Nội (Cầu Giấy, Long Biên) & TP.HCM (Quận 10, Bình Thạnh, Quận 7).',
+    '["showroom", "đặt lịch", "thử máy", "miễn phí", "trải nghiệm", "cầu giấy"]'::jsonb,
+    'Bộ Phận Showroom GymGear'
+  ),
+  (
+    'doc-premium-pricing',
+    'Chính Sách Báo Giá Ưu Đãi Đại Lý & Hội Viên Premium',
+    'pricing',
+    'Chính sách chiết khấu đặc quyền cho tài khoản Premium và Chủ phòng Gym: Giảm trực tiếp từ 10% đến 15% so với giá niêm yết thương mại trên mọi đầu máy. Hỗ trợ miễn phí bản vẽ 2D/3D bố trí mặt bằng, miễn phí vận chuyển & lắp đặt toàn quốc, bảo trì định kỳ 6 tháng/lần trong 2 năm đầu.',
+    '["giá", "báo giá", "chiết khấu", "premium", "đại lý", "ưu đãi"]'::jsonb,
+    'Phòng Kinh Doanh GymGear'
+  ),
+  (
+    'doc-warranty-service',
+    'Chính Sách Bảo Hành 5 Năm & Hỗ Trợ Kỹ Thuật 24/7',
+    'policy',
+    'Cam kết hậu mãi: Khung sườn thép bảo hành 5 năm không gỉ sét. Động cơ motor AC máy chạy bộ bảo hành 5 năm. Bảng mạch điện tử & cáp kéo bảo hành 2 năm. Chính sách 1 đổi 1 trong 30 ngày nếu có lỗi sản xuất. Phản hồi xử lý kỹ thuật trong vòng 24h tại HN, TP.HCM, Đà Nẵng.',
+    '["bảo hành", "sửa chữa", "hỏng", "linh kiện", "động cơ", "kỹ thuật"]'::jsonb,
+    'Trung Tâm Kỹ Thuật GymGear'
+  ),
+  (
+    'doc-nutrition-guide',
+    'Hướng Dẫn Dinh Dưỡng Thể Hình Tăng Cơ Giảm Mỡ',
+    'nutrition',
+    'Nguyên tắc dinh dưỡng chuẩn thể hình: Nạp Protein 1.6g - 2.2g/kg thể trọng mỗi ngày (Ức gà, thịt bò, trứng, cá hồi, Whey Isolate). Tăng cơ (Bulking) thặng dư 300-500 kcal/ngày. Giảm mỡ (Cutting) thâm hụt 300-500 kcal/ngày. Bổ sung Whey Protein sau tập, Creatine 5g/ngày.',
+    '["dinh dưỡng", "protein", "whey", "creatine", "ăn uống", "tăng cơ"]'::jsonb,
+    'Chuyên Gia Dinh Dưỡng GymGear'
+  )
+ON CONFLICT (id) DO NOTHING;

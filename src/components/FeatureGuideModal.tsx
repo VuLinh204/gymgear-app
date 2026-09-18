@@ -44,7 +44,7 @@ export default function FeatureGuideModal({
 
   const FEATURES = [
     {
-      title: '🔍 Thanh Tìm Kiếm Toàn Năng (Spotlight Search)',
+      title: 'Thanh Tìm Kiếm Toàn Năng (Spotlight Search)',
       shortcut: 'Ctrl + K',
       icon: <Search className="w-5 h-5 text-amber-400" />,
       desc: 'Tìm kiếm đa đối tượng cùng lúc: Thiết bị, Bài viết review, Huấn luyện viên (PT) và Lệnh thao tác nhanh. Hỗ trợ gõ tiếng Việt không dấu siêu tốc.',
@@ -52,27 +52,27 @@ export default function FeatureGuideModal({
       actionText: 'Mở Spotlight',
     },
     {
-      title: '📸 Story 24 Giờ & Bộ Lọc Màu Gym',
+      title: 'Story 24 Giờ & Bộ Lọc Màu Gym',
       shortcut: 'Thanh Story',
       icon: <Sparkles className="w-5 h-5 text-orange-400" />,
       desc: 'Đăng khoảnh khắc tập luyện trong ngày, tự động biến mất sau 24 giờ. Có sẵn bộ lọc màu ấm/tương phản cao, gắn nhãn mục tiêu (#LegDay, #PR) và gắn thẻ máy tập.',
     },
     {
-      title: '💬 Nhắn Tin Trực Tiếp & Tư Vấn PT 1-1',
+      title: 'Nhắn Tin Trực Tiếp & Tư Vấn PT 1-1',
       shortcut: 'Nút Chat góc phải',
       icon: <MessageCircle className="w-5 h-5 text-sky-400" />,
-      desc: 'Hỏi đáp kỹ thuật, lịch tập Push-Pull-Legs và mức giá VIP với Master Trainer & Chuyên viên Showroom. Đính kèm thẻ máy tập trực tiếp trong tin nhắn.',
+      desc: 'Hỏi đáp kỹ thuật, lịch tập Push-Pull-Legs và mức giá ưu đãi Premium với Master Trainer & Chuyên viên Showroom. Đính kèm thẻ máy tập trực tiếp trong tin nhắn.',
     },
     {
-      title: '⚖️ So Sánh Thiết Bị Máy Tập Song Song',
+      title: 'So Sánh Thiết Bị Máy Tập Song Song',
       shortcut: 'Ctrl + S',
       icon: <Scale className="w-5 h-5 text-purple-400" />,
-      desc: 'Bảng đối chiếu thông số 2 máy tập cạnh nhau: công suất động cơ, tải trọng, nhóm cơ, giá VIP và chính sách bảo hành chính hãng.',
+      desc: 'Bảng đối chiếu thông số 2 máy tập cạnh nhau: công suất động cơ, tải trọng, nhóm cơ, giá ưu đãi Premium và chính sách bảo hành chính hãng.',
       action: onOpenCompare,
       actionText: 'Mở Bảng So Sánh',
     },
     {
-      title: '🏆 Nhật Ký Kỷ Lục Cá Nhân (PR Tracker)',
+      title: 'Nhật Ký Kỷ Lục Cá Nhân (PR Tracker)',
       shortcut: 'Ctrl + P',
       icon: <Trophy className="w-5 h-5 text-yellow-400" />,
       desc: 'Lưu giữ mốc tạ tối đa (Bench Press, Squat, Leg Press...) và nút 1-chạm chia sẻ chiến tích lên Bảng tin cộng đồng.',
@@ -80,7 +80,7 @@ export default function FeatureGuideModal({
       actionText: 'Xem Kỷ Lục PR',
     },
     {
-      title: '🏢 Showroom Toàn Quốc & Đặt Lịch Dùng Thử',
+      title: 'Showroom Toàn Quốc & Đặt Lịch Dùng Thử',
       shortcut: 'Ctrl + B',
       icon: <MapPin className="w-5 h-5 text-emerald-400" />,
       desc: 'Hệ thống 5+ showroom trên toàn quốc có sẵn hơn 60+ máy tập để trải nghiệm thực tế miễn phí trước khi mua.',
@@ -88,7 +88,7 @@ export default function FeatureGuideModal({
       actionText: 'Đặt Lịch Thử Máy',
     },
     {
-      title: '🔔 Trung Tâm Thông Báo Thời Gian Thực',
+      title: 'Trung Tâm Thông Báo Thời Gian Thực',
       shortcut: 'Chuông Navbar',
       icon: <Bell className="w-5 h-5 text-rose-400" />,
       desc: 'Nhận thông báo khi có người thả tim, bình luận bài viết, theo dõi hoặc duyệt lịch hẹn trải nghiệm showroom.',

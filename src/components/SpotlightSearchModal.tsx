@@ -58,7 +58,7 @@ const TRENDING_SEARCHES = [
   'Đạp đùi DHZ Fusion',
   'Smith Machine',
   'Lịch tập Push-Pull-Legs',
-  'Chiết khấu VIP',
+  'Chiết khấu Premium',
 ];
 
 export default function SpotlightSearchModal({
@@ -170,7 +170,7 @@ export default function SpotlightSearchModal({
     {
       id: 'action-compare',
       title: 'So Sánh 2 Máy Tập',
-      desc: 'Đối chiếu thông số, động cơ, tải trọng và giá VIP',
+      desc: 'Đối chiếu thông số, động cơ, tải trọng và giá ưu đãi Premium',
       icon: <Scale className="w-4 h-4 text-purple-400" />,
       run: () => { onClose(); onOpenCompare(); },
     },
@@ -348,8 +348,13 @@ export default function SpotlightSearchModal({
                         {eq.name}
                       </h4>
                       <p className="text-[10px] text-amber-400 font-semibold">{eq.priceRange}</p>
-                      <span className="text-[9px] text-slate-400 truncate block">
-                        Hãng {eq.brand} • ⭐ {eq.rating}/5.0
+                      <span className="text-[9px] text-slate-400 truncate flex items-center space-x-1">
+                        <span>Hãng {eq.brand}</span>
+                        <span>•</span>
+                        <span className="inline-flex items-center space-x-0.5 text-amber-400">
+                          <Star className="w-2.5 h-2.5 fill-amber-400" />
+                          <span>{eq.rating}/5.0</span>
+                        </span>
                       </span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 shrink-0 transition" />
@@ -386,8 +391,9 @@ export default function SpotlightSearchModal({
                         <span className="text-xs font-bold text-white group-hover:text-amber-400 transition truncate">
                           {post.author?.name}
                         </span>
-                        <span className="text-[10px] text-amber-400 font-bold shrink-0">
-                          ⭐ {post.rating || 5}/5
+                        <span className="text-[10px] text-amber-400 font-bold shrink-0 inline-flex items-center space-x-0.5">
+                          <Star className="w-3 h-3 fill-amber-400" />
+                          <span>{post.rating || 5}/5</span>
                         </span>
                       </div>
                       <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">

@@ -86,27 +86,121 @@ export default function ThemeSwitcherPopover() {
     };
   }, [isOpen]);
 
-  const selectTheme = (themeId: 'meta-blue' | 'cyber-volt' | 'crimson-pulse') => {
-    setActiveTheme(themeId);
-    document.documentElement.setAttribute('data-theme', themeId);
-    try {
-      localStorage.setItem('gymgear-theme', themeId);
-    } catch {}
+  const selectTheme = (themeId: 'meta-blue' | 'cyber-volt' | 'crimson-pulse', event?: React.MouseEvent) => {
+    if (themeId === activeTheme) return;
+
+    const applyTheme = () => {
+      setActiveTheme(themeId);
+      document.documentElement.setAttribute('data-theme', themeId);
+      try {
+        localStorage.setItem('gymgear-theme', themeId);
+      } catch {}
+    };
+
+    const isAppearanceTransition =
+      typeof document !== 'undefined' &&
+      'startViewTransition' in document &&
+      typeof (document as any).startViewTransition === 'function' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!isAppearanceTransition) {
+      document.documentElement.classList.add('theme-transitioning');
+      applyTheme();
+      setTimeout(() => {
+        document.documentElement.classList.remove('theme-transitioning');
+      }, 450);
+      return;
+    }
+
+    const x = event && event.clientX > 0 ? event.clientX : window.innerWidth / 2;
+    const y = event && event.clientY > 0 ? event.clientY : window.innerHeight / 2;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = (document as any).startViewTransition(() => {
+      applyTheme();
+    });
+
+    transition.ready.then(() => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ];
+      document.documentElement.animate(
+        {
+          clipPath: clipPath,
+        },
+        {
+          duration: 450,
+          easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
   };
 
-  const toggleMode = (light: boolean) => {
-    setIsLight(light);
-    if (light) {
-      document.documentElement.classList.add('theme-light');
-      try {
-        localStorage.setItem('theme', 'light');
-      } catch {}
-    } else {
-      document.documentElement.classList.remove('theme-light');
-      try {
-        localStorage.setItem('theme', 'dark');
-      } catch {}
+  const toggleMode = (light: boolean, event?: React.MouseEvent) => {
+    if (light === isLight) return;
+
+    const applyMode = () => {
+      setIsLight(light);
+      if (light) {
+        document.documentElement.classList.add('theme-light');
+        try {
+          localStorage.setItem('theme', 'light');
+        } catch {}
+      } else {
+        document.documentElement.classList.remove('theme-light');
+        try {
+          localStorage.setItem('theme', 'dark');
+        } catch {}
+      }
+    };
+
+    const isAppearanceTransition =
+      typeof document !== 'undefined' &&
+      'startViewTransition' in document &&
+      typeof (document as any).startViewTransition === 'function' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!isAppearanceTransition) {
+      document.documentElement.classList.add('theme-transitioning');
+      applyMode();
+      setTimeout(() => {
+        document.documentElement.classList.remove('theme-transitioning');
+      }, 450);
+      return;
     }
+
+    const x = event && event.clientX > 0 ? event.clientX : window.innerWidth / 2;
+    const y = event && event.clientY > 0 ? event.clientY : window.innerHeight / 2;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    );
+
+    const transition = (document as any).startViewTransition(() => {
+      applyMode();
+    });
+
+    transition.ready.then(() => {
+      const clipPath = [
+        `circle(0px at ${x}px ${y}px)`,
+        `circle(${endRadius}px at ${x}px ${y}px)`,
+      ];
+      document.documentElement.animate(
+        {
+          clipPath: clipPath,
+        },
+        {
+          duration: 450,
+          easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    });
   };
 
   const currentThemeObj = THEMES.find((t) => t.id === activeTheme) || THEMES[0];
@@ -168,7 +262,7 @@ export default function ThemeSwitcherPopover() {
               return (
                 <button
                   key={theme.id}
-                  onClick={() => selectTheme(theme.id)}
+                  onClick={(e) => selectTheme(theme.id, e)}
                   className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer ${
                     isSelected
                       ? 'bg-slate-800/90 ring-1 ring-white/20 shadow-md'
@@ -229,8 +323,8 @@ export default function ThemeSwitcherPopover() {
             <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-950/90 border border-slate-800 theme-switcher-segmented">
               <button
                 type="button"
-                onClick={() => toggleMode(false)}
-                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                onClick={(e) => toggleMode(false, e)}
+                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                   !isLight
                     ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10 theme-mode-active'
                     : 'text-slate-400 hover:text-white theme-mode-inactive'
@@ -242,8 +336,8 @@ export default function ThemeSwitcherPopover() {
 
               <button
                 type="button"
-                onClick={() => toggleMode(true)}
-                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                onClick={(e) => toggleMode(true, e)}
+                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 ${
                   isLight
                     ? 'bg-slate-800 text-white shadow-sm ring-1 ring-white/10 theme-mode-active'
                     : 'text-slate-400 hover:text-white theme-mode-inactive'

@@ -70,7 +70,7 @@ export default function EquipmentCompareModal({
                 So Sánh Thiết Bị Máy Tập
               </h2>
               <p className="text-xs text-slate-400">
-                Đối chiếu trực quan thông số, công suất, tải trọng & giá ưu đãi VIP
+                Đối chiếu trực quan thông số, công suất, tải trọng & giá ưu đãi Premium
               </p>
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function EquipmentCompareModal({
               {/* Row 1: Giá VIP */}
               <div className="grid grid-cols-12 p-3 bg-slate-950/40">
                 <div className="col-span-4 text-slate-400 font-medium flex items-center gap-1">
-                  <Crown className="w-3.5 h-3.5 text-amber-400" /> Giá Ưu Đãi VIP
+                  <Crown className="w-3.5 h-3.5 text-amber-400" /> Giá Ưu Đãi Premium
                 </div>
                 <div className="col-span-4 text-amber-300 font-bold">{equip1.vipPrice || 'Liên hệ'}</div>
                 <div className="col-span-4 text-amber-300 font-bold">{equip2.vipPrice || 'Liên hệ'}</div>
@@ -235,11 +235,13 @@ export default function EquipmentCompareModal({
                 <div className="col-span-4 text-slate-400 font-medium flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> Đánh giá cộng đồng
                 </div>
-                <div className="col-span-4 text-slate-200 font-bold">
-                  ⭐ {equip1.rating || 4.8}/5.0 ({equip1.reviewCount || 20} đánh giá)
+                <div className="col-span-4 text-slate-200 font-bold flex items-center">
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 inline mr-1" />
+                  <span>{equip1.rating || 4.8}/5.0 ({equip1.reviewCount || 20} đánh giá)</span>
                 </div>
-                <div className="col-span-4 text-slate-200 font-bold">
-                  ⭐ {equip2.rating || 4.8}/5.0 ({equip2.reviewCount || 20} đánh giá)
+                <div className="col-span-4 text-slate-200 font-bold flex items-center">
+                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 inline mr-1" />
+                  <span>{equip2.rating || 4.8}/5.0 ({equip2.reviewCount || 20} đánh giá)</span>
                 </div>
               </div>
 

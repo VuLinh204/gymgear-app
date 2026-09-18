@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { SocialPost, BookingRequest, UserAuthor, UserRole, PostComment, Equipment, EquipmentReview, ShowroomItem, CategoryItem } from '@/types';
+import { SocialPost, BookingRequest, UserAuthor, UserRole, PostComment, Equipment, EquipmentReview, ShowroomItem, CategoryItem, AIKnowledgeDoc } from '@/types';
 // Dữ liệu được load từ Supabase DB - không dùng mockData nữa
 
 async function getCurrentAuthId(): Promise<string | undefined> {
@@ -383,11 +383,81 @@ export async function submitBooking(booking: BookingRequest): Promise<{ success:
 
 // ── CẬP NHẬT TRẠNG THÁI BOOKING ─────────────────────────────────────────────
 export async function updateBookingStatus(id: string, status: string) {
+  try {
+    const res = await fetch('/api/admin/bookings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    });
+    const result = await res.json();
+    if (result.success) return true;
+  } catch (_) {}
+
   const { error } = await supabase.from('bookings').update({ status }).eq('id', id);
   if (error) {
     console.error("Error updating booking status:", error);
   }
   return !error;
+}
+
+// ── XÓA ĐƠN BOOKING (Admin) ──────────────────────────────────────────────────
+export async function deleteBooking(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/admin/bookings?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const result = await res.json();
+    if (result.success) return { success: true };
+  } catch (_) {}
+
+  const { error } = await supabase.from('bookings').delete().eq('id', id);
+  return { success: !error, error: error?.message };
+}
+
+// ── THÊM MÁY TẬP MỚI (Admin) ───────────────────────────────────────────────
+export async function createEquipment(equipment: Partial<Equipment>): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const res = await fetch('/api/admin/equipment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(equipment),
+    });
+    const result = await res.json();
+    return result;
+  } catch (err: any) {
+    console.error('Error creating equipment:', err);
+    return { success: false, error: err.message || 'Lỗi kết nối' };
+  }
+}
+
+// ── CẬP NHẬT MÁY TẬP (Admin) ────────────────────────────────────────────────
+export async function updateEquipment(id: string, equipment: Partial<Equipment>): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const res = await fetch('/api/admin/equipment', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...equipment }),
+    });
+    const result = await res.json();
+    return result;
+  } catch (err: any) {
+    console.error('Error updating equipment:', err);
+    return { success: false, error: err.message || 'Lỗi kết nối' };
+  }
+}
+
+// ── XÓA MÁY TẬP (Admin) ─────────────────────────────────────────────────────
+export async function deleteEquipment(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/admin/equipment?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const result = await res.json();
+    return result;
+  } catch (err: any) {
+    console.error('Error deleting equipment:', err);
+    return { success: false, error: err.message || 'Lỗi kết nối' };
+  }
 }
 
 // ── LẤY DANH MỤC THIẾT BỊ TỪ DB (Full mapping) ──────────────────────────────
@@ -690,6 +760,36 @@ export async function fetchUsers(): Promise<UserAuthor[]> {
     id: u.id, name: u.name, email: u.email, avatar: u.avatar,
     role: u.role, roleTitle: u.role_title, isVerified: u.is_verified
   }));
+}
+
+// ── CẬP NHẬT ROLE USER (Admin) ──────────────────────────────────────────────
+export async function updateUserRole(id: string, role: UserRole, roleTitle?: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, role, roleTitle }),
+    });
+    const result = await res.json();
+    return result;
+  } catch (err: any) {
+    console.error('Error updating user role:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ── XÓA USER (Admin) ─────────────────────────────────────────────────────────
+export async function deleteUser(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/admin/users?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const result = await res.json();
+    return result;
+  } catch (err: any) {
+    console.error('Error deleting user:', err);
+    return { success: false, error: err.message };
+  }
 }
 
 // ── AUTH: ĐĂNG KÝ ───────────────────────────────────────────────────────────
@@ -2248,6 +2348,306 @@ export async function sendChatMessage(
 
   return newMsg;
 }
+
+// ── 🤖 AI KNOWLEDGE BASE (Kho Tri Thức AI Tham Khảo) ─────────────────────────
+const LOCAL_KNOWLEDGE_KEY = 'gymgear_ai_knowledge_docs_cache';
+
+// Dữ liệu mẫu đã được chuyển hoàn toàn vào Supabase DB (bảng ai_knowledge_docs).
+// Biến này chỉ giữ lại dạng mảng rỗng để không phá vỡ kiểu TypeScript ở các nơi tham chiếu cũ.
+export const INITIAL_AI_KNOWLEDGE_DOCS: AIKnowledgeDoc[] = [];
+
+export async function fetchAIKnowledgeDocs(): Promise<AIKnowledgeDoc[]> {
+  // 1. Thu thập từ Supabase DB
+  try {
+    const { data, error } = await supabase
+      .from('ai_knowledge_docs')
+      .select('*')
+      .order('updated_at', { ascending: false });
+    if (!error && data && data.length > 0) {
+      const mapped: AIKnowledgeDoc[] = data.map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        category: d.category || 'custom',
+        content: d.content,
+        keywords: Array.isArray(d.keywords) ? d.keywords : [],
+        updatedAt: d.updated_at || new Date().toISOString(),
+        authorName: d.author_name || 'Admin GymGear',
+      }));
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(LOCAL_KNOWLEDGE_KEY, JSON.stringify(mapped));
+        } catch {}
+      }
+      return mapped;
+    }
+  } catch (e) {
+    console.warn('Lỗi đọc bảng ai_knowledge_docs từ Supabase, fallback sang cache cục bộ:', e);
+  }
+
+  // 2. Dự phòng bằng localStorage cache (không có seed data cứng nữa)
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_KNOWLEDGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createAIKnowledgeDoc(doc: Partial<AIKnowledgeDoc>): Promise<AIKnowledgeDoc> {
+  const newDoc: AIKnowledgeDoc = {
+    id: doc.id || `doc-${Date.now()}`,
+    title: doc.title?.trim() || 'Tài liệu kiến thức mới',
+    category: doc.category || 'custom',
+    content: doc.content?.trim() || '',
+    keywords: Array.isArray(doc.keywords) ? doc.keywords : [],
+    updatedAt: new Date().toISOString(),
+    authorName: doc.authorName?.trim() || 'Admin GymGear'
+  };
+
+  // Ghi vào Supabase
+  try {
+    const { error } = await supabase.from('ai_knowledge_docs').insert({
+      id: newDoc.id,
+      title: newDoc.title,
+      category: newDoc.category,
+      content: newDoc.content,
+      keywords: newDoc.keywords,
+      author_name: newDoc.authorName,
+      created_at: new Date().toISOString(),
+      updated_at: newDoc.updatedAt,
+    });
+    if (error) console.warn('Supabase insert ai_knowledge_docs thông báo:', error.message);
+  } catch (err) {
+    console.warn('Lỗi kết nối Supabase khi tạo tài liệu:', err);
+  }
+
+  // Đồng bộ localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_KNOWLEDGE_KEY);
+      const list: AIKnowledgeDoc[] = raw ? JSON.parse(raw) : [];
+      const updated = [newDoc, ...list.filter(d => d.id !== newDoc.id)];
+      localStorage.setItem(LOCAL_KNOWLEDGE_KEY, JSON.stringify(updated));
+    } catch {}
+  }
+
+  return newDoc;
+}
+
+export async function updateAIKnowledgeDoc(id: string, updates: Partial<AIKnowledgeDoc>): Promise<AIKnowledgeDoc | null> {
+  const updatedAt = new Date().toISOString();
+
+  // Cập nhật lên Supabase
+  try {
+    const payload: any = { updated_at: updatedAt };
+    if (updates.title !== undefined) payload.title = updates.title;
+    if (updates.category !== undefined) payload.category = updates.category;
+    if (updates.content !== undefined) payload.content = updates.content;
+    if (updates.keywords !== undefined) payload.keywords = updates.keywords;
+    if (updates.authorName !== undefined) payload.author_name = updates.authorName;
+
+    const { error } = await supabase.from('ai_knowledge_docs').update(payload).eq('id', id);
+    if (error) console.warn('Supabase update ai_knowledge_docs:', error.message);
+  } catch (err) {
+    console.warn('Lỗi kết nối Supabase khi cập nhật tài liệu:', err);
+  }
+
+  // Cập nhật localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_KNOWLEDGE_KEY);
+      const list: AIKnowledgeDoc[] = raw ? JSON.parse(raw) : [];
+      const index = list.findIndex(d => d.id === id);
+      if (index !== -1) {
+        const updatedDoc = {
+          ...list[index],
+          ...updates,
+          updatedAt
+        };
+        list[index] = updatedDoc;
+        localStorage.setItem(LOCAL_KNOWLEDGE_KEY, JSON.stringify(list));
+        return updatedDoc;
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+export async function deleteAIKnowledgeDoc(id: string): Promise<boolean> {
+  // Xóa từ Supabase
+  try {
+    const { error } = await supabase.from('ai_knowledge_docs').delete().eq('id', id);
+    if (error) console.warn('Supabase delete ai_knowledge_docs:', error.message);
+  } catch (err) {
+    console.warn('Lỗi kết nối Supabase khi xóa tài liệu:', err);
+  }
+
+  // Xóa khỏi localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_KNOWLEDGE_KEY);
+      const list: AIKnowledgeDoc[] = raw ? JSON.parse(raw) : [];
+      const filtered = list.filter(d => d.id !== id);
+      localStorage.setItem(LOCAL_KNOWLEDGE_KEY, JSON.stringify(filtered));
+    } catch {}
+  }
+  return true;
+}
+
+// ── 🧠 AI RAG QUERY ENGINE (Tra cứu & sinh câu trả lời) ──────────────────────
+export interface AIResponseResult {
+  text: string;
+  answer: string;
+  sourceDoc?: AIKnowledgeDoc;
+  matchedEquipment?: Equipment;
+  sourceTitle?: string;
+  category?: string;
+}
+
+export type AIQueryResponse = AIResponseResult;
+
+function normalizeStr(text: string): string {
+  return (text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0111\u0110]/g, 'd');
+}
+
+/**
+ * Detect if the user's question is in English.
+ * Heuristic: count words that look English (ascii-only, no Vietnamese characters).
+ * If >40% of words are English-looking, treat as English.
+ */
+function detectEnglish(text: string): boolean {
+  const words = text.trim().split(/\s+/).filter(w => w.length > 1);
+  if (words.length === 0) return false;
+  const vietnamesePattern = /[\u00C0-\u024F\u1E00-\u1EFF]/;
+  const englishWords = words.filter(w => !vietnamesePattern.test(w) && /^[a-zA-Z0-9'"?.!,-]+$/.test(w));
+  return englishWords.length / words.length > 0.4;
+}
+
+export async function generateAIResponse(
+  question: string,
+  equipments: Equipment[] = [],
+  providedDocs?: AIKnowledgeDoc[]
+): Promise<AIResponseResult> {
+  const qNorm = normalizeStr(question);
+  const isEnglish = detectEnglish(question);
+  const docs = providedDocs && providedDocs.length > 0
+    ? providedDocs
+    : await fetchAIKnowledgeDocs();
+
+  // 1. Kiem tra may tap khop trong CSDL equipments
+  let matchedEquipment: Equipment | undefined;
+  for (const eq of equipments) {
+    const eqName = normalizeStr(eq.name);
+    const eqBrand = normalizeStr(eq.brand);
+    const eqModel = normalizeStr(eq.modelNumber || '');
+    if (qNorm.includes(eqName) || (eqModel && qNorm.includes(eqModel))) {
+      matchedEquipment = eq;
+      break;
+    }
+    if (eqBrand && qNorm.includes(eqBrand)) {
+      matchedEquipment = eq;
+    }
+  }
+
+  // 2. Tim tai lieu khop nhat trong Kho Tri Thuc
+  let bestDoc: AIKnowledgeDoc | undefined;
+  let highestScore = 0;
+
+  for (const doc of docs) {
+    let score = 0;
+    const titleNorm = normalizeStr(doc.title);
+    const contentNorm = normalizeStr(doc.content);
+
+    // Tinh diem tu khoa
+    if (doc.keywords && Array.isArray(doc.keywords)) {
+      for (const kw of doc.keywords) {
+        if (qNorm.includes(normalizeStr(kw))) {
+          score += 3;
+        }
+      }
+    }
+
+    // Tinh diem tieu de & noi dung
+    const words = qNorm.split(/\s+/).filter(w => w.length > 2);
+    for (const w of words) {
+      if (titleNorm.includes(w)) score += 2;
+      if (contentNorm.includes(w)) score += 1;
+    }
+
+    if (score > highestScore) {
+      highestScore = score;
+      bestDoc = doc;
+    }
+  }
+
+  // 3. Xay dung cau tra loi AI
+  if (matchedEquipment) {
+    const specs = matchedEquipment.specifications || ({} as any);
+    const eq = matchedEquipment;
+    const answer = isEnglish
+      ? `Hello! Here are the details for **${eq.name}** (${eq.brand}):
+- **Grade:** ${eq.type === 'commercial' ? 'Commercial Grade — built for 24/7 gym use' : 'Premium Home Use'}.
+- **Price:** ${eq.priceRange || `${(eq.estimatedPrice || 0).toLocaleString('vi-VN')} VND`}.
+${eq.vipPrice ? `- **Premium Price:** ${eq.vipPrice}\n` : ''}- **Max Load:** ${specs.weightCapacity || '200 kg'}.
+- **Dimensions:** ${specs.dimensions || 'Commercial standard'}.
+- **Warranty:** ${specs.warranty || '5-year manufacturer warranty'}.
+
+${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}This machine is available at: ${(eq.showroomLocations || ['Cau Giay Showroom', 'District 10 Showroom']).join(', ')}. Book a free test session today!`
+      : `Da chao ban! Ve thiet bi **${eq.name}** (${eq.brand}):
+- **Phan khuc:** ${eq.type === 'commercial' ? 'Commercial Grade chuyen dung phong tap 24/7' : 'Gia dinh cao cap'}.
+- **Gia tham khao:** ${eq.priceRange || `${(eq.estimatedPrice || 0).toLocaleString('vi-VN')} d`}.
+${eq.vipPrice ? `- **Gia uu dai Premium:** ${eq.vipPrice}\n` : ''}- **Tai trong toi da:** ${specs.weightCapacity || '200 kg'}.
+- **Kich thuoc:** ${specs.dimensions || 'Tieu chuan thuong mai'}.
+- **Bao hanh:** ${specs.warranty || '5 nam chinh hang'}.
+
+${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}Hien thiet bi co san tai cac Showroom: ${(eq.showroomLocations || ['Showroom Cau Giay', 'Showroom Quan 10']).join(', ')}. Ban co the dat lich trai nghiem thu may mien phi 0d ngay hom nay!`;
+
+    return {
+      text: answer,
+      answer,
+      matchedEquipment,
+      sourceDoc: bestDoc,
+      sourceTitle: isEnglish
+        ? `GymGear Equipment DB: ${eq.name}`
+        : `Co so du lieu Thiet Bi GymGear: ${eq.name}`,
+      category: 'equipment'
+    };
+  }
+
+  if (bestDoc && highestScore >= 2) {
+    const answer = isEnglish
+      ? `Hi there! Based on our knowledge base — **${bestDoc.title}**:\n\n${bestDoc.content}\n\nFeel free to ask follow-up questions or book a free showroom session!`
+      : `Da chao ban! Dua tren thong tin trong tai lieu **${bestDoc.title}**:\n\n${bestDoc.content}\n\nNeu ban can tu van them chi tiet hoac muon dat lich trai nghiem thuc te tai Showroom, ban co the nhan cau hoi tiep theo hoac de lai so dien thoai de chuyen vien lien he nhe!`;
+
+    return {
+      text: answer,
+      answer,
+      sourceDoc: bestDoc,
+      sourceTitle: bestDoc.title,
+      category: bestDoc.category
+    };
+  }
+
+  // 4. Phan hoi chung
+  const answer = isEnglish
+    ? `Hi! I'm the GymGear AI Assistant. I can help you with:\n- Technical specs on 60+ equipment lines (Impulse, DHZ, Panatta, Life Fitness...),\n- Premium pricing & discounts,\n- Free showroom test sessions,\n- Workout plans (Push-Pull-Legs, Upper-Lower splits).\n\nJust ask me anything!`
+    : `Da chao ban! Minh la Tro ly AI GymGear:\n- Minh co the ho tro ban tu van thong so ky thuat cua hon 60+ dong may tap (Impulse, DHZ, Panatta, Life Fitness...), bao gia uu dai Premium, lich dat thu may Showroom 0d va lich tap khoa hoc (Push-Pull-Legs, Upper-Lower).\n- Ban co the hoi ve bat ky dong may nao hoac chu de ban quan tam. Du lieu duoc ban quan tri GymGear cap nhat thuong xuyen tren he thong!`;
+
+  return {
+    text: answer,
+    answer,
+    sourceTitle: isEnglish ? 'GymGear AI Assistant Knowledge Base' : 'Co so tri thuc Tro ly AI GymGear'
+  };
+}
+
 
 // ── 📊 WORKOUT PR TRACKER (Kỷ lục cá nhân) ──────────────────────────────────
 export interface UserPRRecord {

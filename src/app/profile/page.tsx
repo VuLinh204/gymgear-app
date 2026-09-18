@@ -14,6 +14,7 @@ import SpotlightSearchModal from '@/components/SpotlightSearchModal';
 import FeatureGuideModal from '@/components/FeatureGuideModal';
 import FollowListModal from '@/components/FollowListModal';
 import { AuthModal } from '@/components/AuthModal';
+import { AdminDashboardModal } from '@/components/AdminDashboardModal';
 import { 
   fetchUserPosts, 
   fetchDeletedPosts, 
@@ -45,7 +46,7 @@ import {
 import Link from 'next/link';
 
 function ProfileContent() {
-  const { currentUser, isGuest, requestAuth } = useAuth();
+  const { currentUser, isGuest, requestAuth, isAdmin } = useAuth();
   const searchParams = useSearchParams();
   
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -67,6 +68,7 @@ function ProfileContent() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<'followers' | 'following'>('followers');
+  const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
 
   useEffect(() => {
     const isSaved = searchParams?.get('saved') === 'true' || searchParams?.get('tab') === 'saved';
@@ -157,6 +159,7 @@ function ProfileContent() {
         onOpenBooking={() => handleOpenBooking(null)}
         onOpenSpotlight={() => setSpotlightOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
+        onOpenAdminDashboard={isAdmin ? () => setAdminDashboardOpen(true) : undefined}
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -192,7 +195,7 @@ function ProfileContent() {
                 <h1 className="text-2xl sm:text-3xl font-black text-white truncate">{currentUser.name}</h1>
                 {currentUser.role === 'premium' ? (
                   <span className="inline-flex items-center gap-1 text-amber-400 font-extrabold text-[10px] uppercase tracking-wider bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/30">
-                    <Crown className="w-3 h-3 fill-amber-400" /> VIP
+                    <Crown className="w-3 h-3 fill-amber-400" /> PREMIUM
                   </span>
                 ) : currentUser.role === 'admin' ? (
                   <span className="inline-flex items-center gap-1 text-red-400 font-bold text-[10px] uppercase tracking-wider bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/30">
@@ -541,6 +544,11 @@ function ProfileContent() {
       />
 
       <AuthModal />
+
+      <AdminDashboardModal
+        isOpen={adminDashboardOpen}
+        onClose={() => setAdminDashboardOpen(false)}
+      />
     </div>
   );
 }

@@ -185,7 +185,9 @@ export const EditPostModal: React.FC<EditPostModalProps> = ({ post, onClose, onU
                     }}
                     className="w-12 bg-transparent text-amber-400 font-bold text-xs text-center outline-none"
                   />
-                  <span className="text-slate-400 text-xs font-bold">/ 5 ⭐</span>
+                  <span className="text-slate-400 text-xs font-bold inline-flex items-center gap-1">
+                    / 5 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                  </span>
                 </div>
               </div>
             </div>

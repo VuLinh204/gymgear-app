@@ -527,7 +527,7 @@ export default function StoryViewer({
                             </p>
                             {viewer.role === 'premium' && (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                                VIP
+                                PREMIUM
                               </span>
                             )}
                             {viewer.role === 'admin' && (

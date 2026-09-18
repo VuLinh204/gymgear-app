@@ -9,15 +9,17 @@ import { BookingModal } from '@/components/BookingModal';
 import { fetchPosts, fetchCommunityStats } from '@/lib/supabaseDB';
 import { SocialPost, Equipment } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { AdminDashboardModal } from '@/components/AdminDashboardModal';
 import { Users, Dumbbell, Award, TrendingUp, MessageSquare } from 'lucide-react';
 
 export default function CommunityPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingEquipment, setBookingEquipment] = useState<Equipment | null>(null);
+  const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'trending'>('all');
 
   // Dynamic Community Stats from DB
@@ -61,7 +63,7 @@ export default function CommunityPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-      <Navbar onSearch={() => {}} onOpenBooking={() => handleOpenBooking(null)} />
+      <Navbar onSearch={() => {}} onOpenBooking={() => handleOpenBooking(null)} onOpenAdminDashboard={isAdmin ? () => setAdminDashboardOpen(true) : undefined} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
@@ -140,6 +142,7 @@ export default function CommunityPage() {
         <EquipmentDetailModal equipment={selectedEquipment} onClose={() => setSelectedEquipment(null)} onOpenBooking={handleOpenBooking} />
       )}
       <BookingModal isOpen={bookingOpen} onClose={() => { setBookingOpen(false); setBookingEquipment(null); }} selectedEquipment={bookingEquipment} />
+      <AdminDashboardModal isOpen={adminDashboardOpen} onClose={() => setAdminDashboardOpen(false)} />
     </div>
   );
 }

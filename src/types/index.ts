@@ -133,3 +133,13 @@ export interface CategoryItem {
   iconName: string;
 }
 
+export interface AIKnowledgeDoc {
+  id: string;
+  title: string;
+  category: 'equipment' | 'workout' | 'nutrition' | 'policy' | 'pricing' | 'custom';
+  content: string;
+  keywords: string[];
+  updatedAt: string;
+  authorName?: string;
+}
+

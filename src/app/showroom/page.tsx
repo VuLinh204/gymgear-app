@@ -5,6 +5,8 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { BookingModal } from '@/components/BookingModal';
 import EquipmentCompareModal from '@/components/EquipmentCompareModal';
+import { AdminDashboardModal } from '@/components/AdminDashboardModal';
+import { useAuth } from '@/context/AuthContext';
 import { Equipment, ShowroomItem } from '@/types';
 import { fetchShowrooms, fetchEquipments } from '@/lib/supabaseDB';
 import { 
@@ -23,9 +25,11 @@ import {
 } from 'lucide-react';
 
 export default function ShowroomPage() {
+  const { isAdmin } = useAuth();
   const [search, setSearch] = useState('');
   const [bookingOpen, setBookingOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [adminDashboardOpen, setAdminDashboardOpen] = useState(false);
   const [selectedEquipForBooking, setSelectedEquipForBooking] = useState<Equipment | null>(null);
 
   // Dynamic Data from DB
@@ -57,7 +61,7 @@ export default function ShowroomPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-      <Navbar onSearch={() => {}} onOpenBooking={() => setBookingOpen(true)} />
+      <Navbar onSearch={() => {}} onOpenBooking={() => setBookingOpen(true)} onOpenAdminDashboard={isAdmin ? () => setAdminDashboardOpen(true) : undefined} />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
         
@@ -213,6 +217,11 @@ export default function ShowroomPage() {
         isOpen={compareOpen}
         onClose={() => setCompareOpen(false)}
         onOpenBooking={(equip) => handleOpenBookingWithEquip(equip)}
+      />
+
+      <AdminDashboardModal
+        isOpen={adminDashboardOpen}
+        onClose={() => setAdminDashboardOpen(false)}
       />
     </div>
   );

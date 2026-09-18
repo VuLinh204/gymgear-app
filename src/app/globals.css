@@ -253,6 +253,33 @@ button[class*="bg-amber-500"] .text-slate-950 {
   color: var(--theme-accent) !important;
 }
 
+/* ── OriginKit View Transitions for Ultra-smooth Theme & Mode Switch ── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+/* Smooth fallback transition for browsers without View Transitions */
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 350ms cubic-bezier(0.16, 1, 0.3, 1),
+              color 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 350ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition-delay: 0s !important;
+}
+
 /* ── Dark Mode Contrast Hierarchy (Adapts to Active Theme) ── */
 :root:not(.theme-light) body {
   background-color: var(--theme-bg, #18191a) !important;

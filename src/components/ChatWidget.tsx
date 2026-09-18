@@ -1,386 +1,545 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  Dumbbell, 
-  Image as ImageIcon, 
-  ChevronLeft, 
-  Check, 
-  Sparkles, 
-  Paperclip,
-  Smile,
-  ShieldCheck,
-  UserCheck
+import {
+  MessageCircle,
+  X,
+  Send,
+  Bot,
+  BookOpen,
+  Plus,
+  Trash2,
+  Clock,
+  Zap,
+  FileText,
+  Tag,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  RotateCcw,
 } from 'lucide-react';
-import { 
-  ChatMessage, 
-  ChatContact, 
-  fetchChatContacts, 
-  fetchChatMessages, 
-  sendChatMessage,
-  fetchEquipments
+import {
+  fetchEquipments,
+  generateAIResponse,
+  fetchAIKnowledgeDocs,
+  createAIKnowledgeDoc,
+  deleteAIKnowledgeDoc,
 } from '@/lib/supabaseDB';
-import { Equipment } from '@/types';
+import type { AIResponseResult } from '@/lib/supabaseDB';
+import type { Equipment, AIKnowledgeDoc } from '@/types';
+
+type MessageRole = 'user' | 'ai' | 'system';
+
+interface ChatMsg {
+  id: string;
+  role: MessageRole;
+  text: string;
+  sourceTitle?: string;
+  matchedEquipment?: Equipment;
+  createdAt: Date;
+  status?: 'sent' | 'error';
+}
 
 interface ChatWidgetProps {
   onOpenEquipmentDetail?: (equipmentId: string) => void;
 }
 
+const WAIT_SECS = 300;
+
 const QUICK_PROMPTS = [
-  '💪 Tư vấn lịch tập Push-Pull-Legs',
-  '🏋️ Máy Impulse PT300H có tốt không?',
-  '🏷️ Hỏi chính sách chiết khấu VIP',
-  '📍 Showroom nào có sẵn máy thử?',
+  'Chính sách hội viên Premium?',
+  'Tư vấn lịch tập Push-Pull-Legs',
+  'Showroom Hà Nội ở đâu?',
+  'Máy Impulse PT300H giá bao nhiêu?',
 ];
 
+const CATEGORY_LABELS: Record<string, string> = {
+  equipment: 'Thiết bị',
+  workout: 'Luyện tập',
+  nutrition: 'Dinh dưỡng',
+  policy: 'Chính sách',
+  pricing: 'Giá cả',
+  custom: 'Khác',
+};
+
+function buildWelcome(): ChatMsg {
+  return {
+    id: 'welcome',
+    role: 'ai',
+    text: 'Xin chào! Tôi là GymGear AI Assistant. Tôi có thể tư vấn về máy tập, chính sách giá, lịch luyện tập và dinh dưỡng. Hãy đặt câu hỏi bất cứ lúc nào!\n\nNếu bạn muốn được tư vấn trực tiếp từ admin, hãy bấm "Cho Admin" phía dưới.',
+    createdAt: new Date(),
+    status: 'sent',
+  };
+}
+
 export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
-  const { currentUser, isGuest, requestAuth } = useAuth();
+  const { currentUser } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
-  const [contacts, setContacts] = useState<ChatContact[]>([]);
-  const [activeContact, setActiveContact] = useState<ChatContact | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [activeTab, setActiveTab] = useState<'chat' | 'kb'>('chat');
   const [inputText, setInputText] = useState('');
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string>('');
-  const [showEquipmentPicker, setShowEquipmentPicker] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [messages, setMessages] = useState<ChatMsg[]>([buildWelcome()]);
+  const [mode, setMode] = useState<'ai' | 'waiting'>('ai');
+  const [countdown, setCountdown] = useState(WAIT_SECS);
+  const [countdownActive, setCountdownActive] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [docs, setDocs] = useState<AIKnowledgeDoc[]>([]);
+  const [kbLoading, setKbLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newDocTitle, setNewDocTitle] = useState('');
+  const [newDocContent, setNewDocContent] = useState('');
+  const [newDocCategory, setNewDocCategory] = useState<AIKnowledgeDoc['category']>('custom');
+  const [newDocKeywords, setNewDocKeywords] = useState('');
+
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { fetchEquipments().then(setEquipments); }, []);
+
   useEffect(() => {
-    fetchChatContacts().then(setContacts);
-    fetchEquipments().then(setEquipments);
+    if (activeTab === 'kb') {
+      setKbLoading(true);
+      fetchAIKnowledgeDocs().then((d) => { setDocs(d); setKbLoading(false); });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (isOpen) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isOpen, isTyping]);
+
+  const triggerAIAutoReply = useCallback(() => {
+    const systemMsg: ChatMsg = {
+      id: `sys-${Date.now()}`,
+      role: 'system',
+      text: 'Admin chưa thể phản hồi. AI Assistant sẽ tự động trả lời câu hỏi của bạn.',
+      createdAt: new Date(),
+      status: 'sent',
+    };
+    setMessages((prev) => [...prev, systemMsg]);
+    setMode('ai');
   }, []);
 
-  useEffect(() => {
-    if (activeContact) {
-      fetchChatMessages(activeContact.id).then(setMessages);
-    }
-  }, [activeContact]);
+  const startCountdown = useCallback(() => {
+    setCountdown(WAIT_SECS);
+    setCountdownActive(true);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!);
+          setCountdownActive(false);
+          triggerAIAutoReply();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [triggerAIAutoReply]);
 
-  useEffect(() => {
-    if (isOpen && activeContact) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isOpen, activeContact]);
+  const handleForceAI = () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setCountdownActive(false);
+    triggerAIAutoReply();
+  };
 
-  const handleOpenChatWith = (contact: ChatContact) => {
-    setActiveContact(contact);
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   };
 
   const handleSend = async (customText?: string) => {
-    const textToSend = (customText || inputText).trim();
-    if (!textToSend && !selectedEquipmentId) return;
+    const textToSend = (customText ?? inputText).trim();
+    if (!textToSend) return;
 
-    if (isGuest) {
-      requestAuth('login');
+    const userMsg: ChatMsg = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      text: textToSend,
+      createdAt: new Date(),
+      status: 'sent',
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setInputText('');
+
+    if (mode === 'waiting') {
+      startCountdown();
+      const waitMsg: ChatMsg = {
+        id: `wait-${Date.now()}`,
+        role: 'system',
+        text: 'Tin nhắn đã được gửi. AI sẽ phản hồi tự động nếu admin chưa trả lời trong 5 phút.',
+        createdAt: new Date(),
+        status: 'sent',
+      };
+      setMessages((prev) => [...prev, waitMsg]);
       return;
     }
 
-    if (!activeContact) return;
+    setIsTyping(true);
+    await new Promise((r) => setTimeout(r, 800 + Math.random() * 600));
 
-    const newMsg = await sendChatMessage(
-      activeContact.id,
-      textToSend,
-      undefined,
-      selectedEquipmentId || undefined,
-      currentUser
-    );
-
-    setMessages((prev) => [...prev, newMsg]);
-    setInputText('');
-    setSelectedEquipmentId('');
-    setShowEquipmentPicker(false);
-
-    // Tự động phản hồi mô phỏng (Bot/PT reply) sau 1.5s
-    setTimeout(async () => {
-      let replyText = 'Cảm ơn bạn đã nhắn! Mình đã ghi nhận và sẽ phản hồi chi tiết cho bạn ngay.';
-      if (textToSend.includes('Impulse') || textToSend.includes('PT300H')) {
-        replyText = 'Dòng Impulse PT300H động cơ AC 4.0HP cực kỳ bền cho phòng tập thương mại hoặc gia đình dùng cường độ cao bạn nhé!';
-      } else if (textToSend.includes('VIP') || textToSend.includes('chiết khấu')) {
-        replyText = 'Hội viên VIP tại GymGear được chiết khấu trực tiếp 15% khi mua máy và miễn phí lắp đặt toàn quốc!';
-      } else if (textToSend.includes('lịch tập') || textToSend.includes('Push-Pull-Legs')) {
-        replyText = 'Lịch Push-Pull-Legs 6 buổi/tuần rất hiệu quả: Ngày 1 Ngực/Vai/Tay sau, Ngày 2 Lưng/Tay trước, Ngày 3 Chân/Bụng!';
-      }
-
-      const botReply = await sendChatMessage(
-        activeContact.id,
-        replyText,
-        undefined,
-        undefined,
-        {
-          id: activeContact.id,
-          name: activeContact.name,
-          avatar: activeContact.avatar,
-          role: 'user',
-          roleTitle: activeContact.roleTitle,
-          isVerified: true,
-        }
-      );
-      setMessages((prev) => [...prev, botReply]);
-    }, 1200);
+    try {
+      const result: AIResponseResult = await generateAIResponse(textToSend, equipments);
+      const aiMsg: ChatMsg = {
+        id: `ai-${Date.now()}`,
+        role: 'ai',
+        text: result.text,
+        sourceTitle: result.sourceTitle,
+        matchedEquipment: result.matchedEquipment,
+        createdAt: new Date(),
+        status: 'sent',
+      };
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch {
+      const errMsg: ChatMsg = {
+        id: `err-${Date.now()}`,
+        role: 'ai',
+        text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.',
+        createdAt: new Date(),
+        status: 'error',
+      };
+      setMessages((prev) => [...prev, errMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  const totalUnread = contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const handleAddDoc = async () => {
+    if (!newDocTitle.trim() || !newDocContent.trim()) return;
+    const kws = newDocKeywords.split(',').map((k) => k.trim()).filter(Boolean);
+    const created = await createAIKnowledgeDoc({
+      title: newDocTitle.trim(),
+      content: newDocContent.trim(),
+      category: newDocCategory,
+      keywords: kws,
+      authorName: currentUser?.name || 'Admin',
+    });
+    setDocs((prev) => [created, ...prev]);
+    setNewDocTitle('');
+    setNewDocContent('');
+    setNewDocKeywords('');
+    setShowAddForm(false);
+  };
+
+  const handleDeleteDoc = async (id: string) => {
+    await deleteAIKnowledgeDoc(id);
+    setDocs((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const handleReset = () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setCountdownActive(false);
+    setMessages([buildWelcome()]);
+    setMode('ai');
+    setCountdown(WAIT_SECS);
+  };
 
   return (
     <div className="fixed bottom-5 right-5 z-[100] font-sans">
-      {/* Nút bấm mở Chat nổi */}
       {!isOpen && (
         <button
+          id="chat-widget-open-btn"
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 text-slate-950 font-bold text-sm shadow-xl shadow-orange-500/30 hover:scale-105 hover:shadow-orange-500/50 transition-all duration-300 focus:outline-none"
+          className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-tr from-amber-500 via-orange-500 to-pink-500 text-white font-bold text-sm shadow-xl shadow-orange-500/30 hover:scale-105 hover:shadow-orange-500/50 transition-all duration-300 focus:outline-none"
         >
-          <MessageCircle className="w-5 h-5 fill-slate-950" />
-          <span className="hidden sm:inline">Hỏi HLV / Showroom</span>
-          {totalUnread > 0 && (
-            <span className="w-5 h-5 rounded-full bg-white text-slate-950 font-bold text-xs flex items-center justify-center shadow-md">
-              {totalUnread}
-            </span>
-          )}
+          <Bot className="w-5 h-5" />
+          <span className="hidden sm:inline">GymGear AI</span>
           <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-400 border-2 border-slate-950 rounded-full animate-ping" />
         </button>
       )}
 
-      {/* Hộp thoại Chat Widget */}
       {isOpen && (
-        <div className="w-[92vw] sm:w-[380px] h-[540px] max-h-[85vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-          
+        <div className="w-[92vw] sm:w-[400px] h-[580px] max-h-[88vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+
           {/* Header */}
-          <div className="p-3.5 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between">
-            {activeContact ? (
-              <div className="flex items-center gap-2.5 min-w-0">
-                <button
-                  onClick={() => setActiveContact(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                  title="Quay lại danh sách"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <div className="relative shrink-0">
-                  <img
-                    src={activeContact.avatar}
-                    alt=""
-                    className="w-8 h-8 rounded-full object-cover border border-slate-700"
-                  />
-                  {activeContact.isOnline && (
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-slate-900" />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-white truncate flex items-center gap-1">
-                    {activeContact.name}
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  </h4>
-                  <p className="text-[10px] text-slate-400 truncate">
-                    {activeContact.roleTitle}
-                  </p>
-                </div>
+          <div className="shrink-0 px-4 py-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/60 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center shrink-0">
+                <Bot className="w-4 h-4 text-white" />
               </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 font-bold">
-                  <MessageCircle className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-xs sm:text-sm font-bold text-white leading-tight">Tư Vấn Gym & Thiết Bị</h3>
-                  <span className="text-[10px] text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Đang trực tuyến
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-white leading-tight">GymGear AI Assistant</h3>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-emerald-400">
+                    {mode === 'ai' ? 'AI Instant' : countdownActive ? `Cho Admin (${formatCountdown(countdown)})` : 'Cho Admin'}
                   </span>
                 </div>
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={handleReset} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition" title="Reset">
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => setIsOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
 
+          {/* Tab Bar */}
+          <div className="shrink-0 flex border-b border-slate-800 bg-slate-900">
             <button
-              onClick={() => setIsOpen(false)}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              aria-label="Đóng"
+              onClick={() => setActiveTab('chat')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition ${activeTab === 'chat' ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5' : 'text-slate-400 hover:text-white'}`}
             >
-              <X className="w-4 h-4" />
+              <MessageCircle className="w-3.5 h-3.5" />
+              Hỏi đáp
+            </button>
+            <button
+              onClick={() => setActiveTab('kb')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition ${activeTab === 'kb' ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5' : 'text-slate-400 hover:text-white'}`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Kho tri thức
             </button>
           </div>
 
-          {/* Body */}
-          {activeContact ? (
-            /* CONVERSATION VIEW */
-            <div className="flex-1 flex flex-col min-h-0 bg-slate-950/60">
-              
-              {/* Messages Scroll Area */}
+          {/* Mode Switcher */}
+          {activeTab === 'chat' && (
+            <div className="shrink-0 px-3 py-2 bg-slate-800/50 border-b border-slate-800 flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => { setMode('ai'); if (countdownRef.current) { clearInterval(countdownRef.current); setCountdownActive(false); } }}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition ${mode === 'ai' ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                >
+                  <Zap className="w-3 h-3" />
+                  Hỏi đáp AI
+                </button>
+                <button
+                  onClick={() => setMode('waiting')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition ${mode === 'waiting' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                >
+                  <Clock className="w-3 h-3" />
+                  Liên hệ Admin
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* CHAT TAB */}
+          {activeTab === 'chat' && (
+            <div className="flex-1 flex flex-col min-h-0">
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                {messages.map((msg) => {
-                  const isMe = msg.senderId === currentUser?.id || msg.senderId === 'current_user';
-                  const taggedEq = msg.equipmentId
-                    ? equipments.find((e) => e.id === msg.equipmentId)
-                    : null;
-
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-                    >
-                      <div className="flex items-end gap-1.5 max-w-[85%]">
-                        {!isMe && (
-                          <img
-                            src={msg.senderAvatar}
-                            alt=""
-                            className="w-6 h-6 rounded-full object-cover shrink-0 mb-1"
-                          />
-                        )}
-                        <div
-                          className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                            isMe
-                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-medium rounded-br-none shadow-md'
-                              : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700/60'
-                          }`}
-                        >
-                          {/* Tagged equipment card trong tin nhắn */}
-                          {taggedEq && (
-                            <div 
-                              onClick={() => onOpenEquipmentDetail?.(taggedEq.id)}
-                              className="mb-2 p-2 rounded-xl bg-black/30 border border-white/10 flex items-center gap-2 cursor-pointer hover:border-amber-400 transition"
-                            >
-                              <img src={taggedEq.thumbnail} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                              <div className="min-w-0 flex-1">
-                                <span className="text-[11px] font-bold text-white block truncate">{taggedEq.name}</span>
-                                <span className="text-[10px] text-amber-300 block">{taggedEq.priceRange}</span>
-                              </div>
-                            </div>
-                          )}
-
-                          <p>{msg.text}</p>
-                        </div>
-                      </div>
-                      <span className="text-[9px] text-slate-500 px-1 mt-1">
-                        {new Date(msg.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                {messages.map((msg) => (
+                  <MessageBubble key={msg.id} msg={msg} onOpenEquipmentDetail={onOpenEquipmentDetail} />
+                ))}
+                {isTyping && (
+                  <div className="flex items-end gap-2">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center shrink-0">
+                      <Bot className="w-3.5 h-3.5 text-white" />
                     </div>
-                  );
-                })}
+                    <div className="px-3 py-2.5 bg-slate-800 border border-slate-700/60 rounded-2xl rounded-bl-none">
+                      <div className="flex gap-1 items-center">
+                        <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                        <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                        <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {countdownActive && (
+                  <div className="mx-2 p-3 rounded-xl bg-blue-900/40 border border-blue-500/30 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-blue-400 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-white">
+                          AI sẽ trả lời sau: <span className="text-blue-300 tabular-nums">{formatCountdown(countdown)}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400">Admin chưa phản hồi</p>
+                      </div>
+                    </div>
+                    <button onClick={handleForceAI} className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500 text-white text-[10px] font-bold hover:bg-amber-400 transition">
+                      <Zap className="w-3 h-3" />
+                      Kích hoạt AI
+                    </button>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick Suggestion Chips */}
-              <div className="px-3 py-1.5 flex gap-1.5 overflow-x-auto scrollbar-hide border-t border-slate-800/80 bg-slate-900/40">
-                {QUICK_PROMPTS.map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSend(prompt)}
-                    className="shrink-0 text-[10px] px-2 py-1 rounded-full bg-slate-800/80 hover:bg-amber-500/20 hover:text-amber-300 text-slate-300 border border-slate-700/60 transition"
-                  >
-                    {prompt}
+              {/* Quick prompts */}
+              <div className="shrink-0 px-3 py-1.5 flex gap-1.5 overflow-x-auto scrollbar-hide border-t border-slate-800/80 bg-slate-900/40">
+                {QUICK_PROMPTS.map((p, i) => (
+                  <button key={i} onClick={() => handleSend(p)} className="shrink-0 text-[10px] px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-amber-500/20 hover:text-amber-300 text-slate-300 border border-slate-700/60 transition whitespace-nowrap">
+                    {p}
                   </button>
                 ))}
               </div>
 
-              {/* Tag Equipment Selector nếu đang mở */}
-              {showEquipmentPicker && (
-                <div className="p-2.5 bg-slate-900 border-t border-slate-800">
-                  <span className="text-[10px] font-bold text-slate-300 block mb-1">
-                    Chọn máy tập để đính kèm hỏi tư vấn:
-                  </span>
-                  <select
-                    value={selectedEquipmentId}
-                    onChange={(e) => setSelectedEquipmentId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs"
-                  >
-                    <option value="">-- Không đính kèm máy --</option>
-                    {equipments.map((eq) => (
-                      <option key={eq.id} value={eq.id}>
-                        {eq.name} ({eq.brand})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Input Bar */}
-              <div className="p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setShowEquipmentPicker(!showEquipmentPicker)}
-                  className={`p-2 rounded-xl border transition ${
-                    selectedEquipmentId
-                      ? 'bg-amber-500 text-slate-950 border-amber-400'
-                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
-                  }`}
-                  title="Đính kèm máy tập"
-                >
-                  <Dumbbell className="w-4 h-4" />
-                </button>
-
+              {/* Input */}
+              <div className="shrink-0 p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-1.5">
                 <input
+                  id="chat-widget-input"
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Nhập tin nhắn tư vấn..."
-                  className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                  placeholder={mode === 'ai' ? 'Hỏi AI bất kỳ điều gì...' : 'Nhắn tin cho Admin...'}
+                  className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
                 />
-
                 <button
+                  id="chat-widget-send-btn"
                   type="button"
                   onClick={() => handleSend()}
-                  disabled={!inputText.trim() && !selectedEquipmentId}
-                  className="p-2 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 disabled:opacity-40 transition shadow"
-                  title="Gửi tin nhắn"
+                  disabled={!inputText.trim()}
+                  className="p-2.5 rounded-xl bg-amber-500 text-white hover:bg-amber-400 disabled:opacity-40 transition shadow"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </div>
-
-            </div>
-          ) : (
-            /* CONTACTS LIST VIEW */
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-800/80 bg-slate-950/40">
-              <div className="p-3 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-300 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Nhắn tin hỏi đáp trực tiếp cùng Master Trainer & Showroom.</span>
-              </div>
-
-              {contacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  onClick={() => handleOpenChatWith(contact)}
-                  className="p-3.5 flex items-center gap-3 cursor-pointer hover:bg-slate-800/50 transition-colors"
-                >
-                  <div className="relative shrink-0">
-                    <img
-                      src={contact.avatar}
-                      alt=""
-                      className="w-11 h-11 rounded-full object-cover border border-slate-700"
-                    />
-                    {contact.isOnline && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-900 shadow" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <h4 className="text-xs font-bold text-white truncate">{contact.name}</h4>
-                      <span className="text-[10px] text-slate-500 shrink-0">{contact.lastMessageTime}</span>
-                    </div>
-                    <p className="text-[11px] text-amber-400/90 font-medium truncate mb-0.5">
-                      {contact.roleTitle}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">
-                      {contact.lastMessage}
-                    </p>
-                  </div>
-
-                  {contact.unreadCount > 0 && (
-                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center justify-center shrink-0">
-                      {contact.unreadCount}
-                    </span>
-                  )}
-                </div>
-              ))}
             </div>
           )}
 
+          {/* KB TAB */}
+          {activeTab === 'kb' && (
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="shrink-0 px-3 py-2.5 bg-slate-800/30 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-white">Kho tri thức ({docs.length})</p>
+                  <p className="text-[10px] text-slate-400">AI tham khảo nội dung này để trả lời</p>
+                </div>
+                <button onClick={() => setShowAddForm((v) => !v)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-500 text-white text-[10px] font-bold hover:bg-amber-400 transition">
+                  <Plus className="w-3.5 h-3.5" />
+                  Thêm tài liệu
+                </button>
+              </div>
+
+              {showAddForm && (
+                <div className="shrink-0 p-3 border-b border-slate-700 bg-slate-800/50 space-y-2">
+                  <input type="text" value={newDocTitle} onChange={(e) => setNewDocTitle(e.target.value)} placeholder="Tieu de tai lieu..." className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500" />
+                  <select value={newDocCategory} onChange={(e) => setNewDocCategory(e.target.value as AIKnowledgeDoc['category'])} className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-500">
+                    {Object.entries(CATEGORY_LABELS).map(([val, label]) => (<option key={val} value={val}>{label}</option>))}
+                  </select>
+                  <textarea value={newDocContent} onChange={(e) => setNewDocContent(e.target.value)} placeholder="Noi dung tai lieu (AI se hoc tu day)..." rows={3} className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none" />
+                  <input type="text" value={newDocKeywords} onChange={(e) => setNewDocKeywords(e.target.value)} placeholder="Tu khoa (cach nhau bang dau phay)..." className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500" />
+                  <div className="flex gap-2">
+                    <button onClick={handleAddDoc} disabled={!newDocTitle.trim() || !newDocContent.trim()} className="flex-1 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-400 disabled:opacity-40 transition">Luu tai lieu</button>
+                    <button onClick={() => setShowAddForm(false)} className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition">Huy</button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-800/80">
+                {kbLoading ? (
+                  <div className="p-6 flex justify-center"><div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>
+                ) : docs.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 text-xs">
+                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    Chua co tai lieu nao
+                  </div>
+                ) : (
+                  docs.map((doc) => <DocItem key={doc.id} doc={doc} onDelete={() => handleDeleteDoc(doc.id)} />)
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function MessageBubble({ msg, onOpenEquipmentDetail }: { msg: ChatMsg; onOpenEquipmentDetail?: (id: string) => void }) {
+  if (msg.role === 'system') {
+    return (
+      <div className="flex justify-center">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/50">
+          <AlertCircle className="w-3 h-3 text-blue-400 shrink-0" />
+          <span className="text-[10px] text-slate-400">{msg.text}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const isUser = msg.role === 'user';
+  return (
+    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1`}>
+      {!isUser && (
+        <div className="flex items-center gap-1 px-1">
+          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center">
+            <Bot className="w-3 h-3 text-white" />
+          </div>
+          <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wide">AI Assistant</span>
+          {msg.sourceTitle && (
+            <span className="text-[9px] text-slate-500 flex items-center gap-0.5 ml-1">
+              <FileText className="w-2.5 h-2.5" />
+              {msg.sourceTitle}
+            </span>
+          )}
+        </div>
+      )}
+      <div className={`max-w-[85%] flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
+        {msg.matchedEquipment && (
+          <div onClick={() => onOpenEquipmentDetail?.(msg.matchedEquipment!.id)} className="w-full p-2.5 rounded-xl bg-slate-800/80 border border-amber-500/30 hover:border-amber-400 cursor-pointer transition flex items-center gap-2.5">
+            {msg.matchedEquipment.thumbnail && (
+              <img src={msg.matchedEquipment.thumbnail} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-white truncate">{msg.matchedEquipment.name}</p>
+              <p className="text-[10px] text-amber-400">{msg.matchedEquipment.brand}</p>
+              <p className="text-[10px] text-slate-400">{msg.matchedEquipment.priceRange}</p>
+            </div>
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold whitespace-nowrap shrink-0">Xem chi tiet</span>
+          </div>
+        )}
+        <div className={`px-3 py-2.5 rounded-2xl text-xs leading-relaxed whitespace-pre-line ${isUser ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white font-medium rounded-br-none shadow-md' : msg.status === 'error' ? 'bg-red-900/40 border border-red-500/30 text-red-300 rounded-bl-none' : 'bg-slate-800 text-slate-100 border border-slate-700/60 rounded-bl-none'}`}>
+          {msg.text}
+        </div>
+        <span className="text-[9px] text-slate-500 px-1">
+          {msg.createdAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function DocItem({ doc, onDelete }: { doc: AIKnowledgeDoc; onDelete: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="p-3 hover:bg-slate-800/30 transition">
+      <div className="flex items-start gap-2">
+        <div className="w-6 h-6 rounded-lg bg-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+          <FileText className="w-3.5 h-3.5 text-amber-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-white truncate">{doc.title}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-300 font-medium">
+                  {CATEGORY_LABELS[doc.category] || doc.category}
+                </span>
+                {doc.authorName && <span className="text-[9px] text-slate-500">{doc.authorName}</span>}
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => setExpanded((v) => !v)} className="p-1 rounded text-slate-400 hover:text-white transition">
+                {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              <button onClick={onDelete} className="p-1 rounded text-slate-500 hover:text-red-400 transition">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+          {expanded && (
+            <div className="mt-2 space-y-1.5">
+              <p className="text-[11px] text-slate-300 leading-relaxed whitespace-pre-wrap">{doc.content}</p>
+              {doc.keywords.length > 0 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  <Tag className="w-3 h-3 text-slate-500" />
+                  {doc.keywords.map((kw, i) => (
+                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700/60 text-slate-400">{kw}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

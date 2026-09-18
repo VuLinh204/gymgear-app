@@ -98,7 +98,7 @@ export default function SettingsPage() {
     setTimeout(async () => {
       const success = await upgradeUserRole(currentUser.id, 'premium');
       if (success) {
-        setMessage({ type: 'success', text: '🎉 Chúc mừng! Bạn đã nâng cấp lên hạng VIP thành công. Vui lòng đăng nhập lại để nhận huy hiệu.' });
+        setMessage({ type: 'success', text: 'Chúc mừng! Bạn đã nâng cấp lên hạng Premium thành công. Vui lòng đăng nhập lại để nhận huy hiệu.' });
       } else {
         setMessage({ type: 'error', text: 'Nâng cấp thất bại.' });
       }
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                   <>
                     <Crown className="w-8 h-8 text-amber-400" />
                     <div>
-                      <div className="font-bold text-lg text-white">Thành Viên VIP</div>
+                      <div className="font-bold text-lg text-white">Thành Viên Premium</div>
                       <div className="text-xs text-amber-400">Quyền lợi cao cấp nhất</div>
                     </div>
                   </>
@@ -218,7 +218,7 @@ export default function SettingsPage() {
               {!isPremium && (
                 <div className="space-y-4">
                   <ul className="text-xs text-slate-400 space-y-2 mb-4">
-                    <li className="flex gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Huy hiệu VIP nổi bật</li>
+                    <li className="flex gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Huy hiệu Premium nổi bật</li>
                     <li className="flex gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Ưu tiên hiển thị bài viết</li>
                     <li className="flex gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Xem giá máy giảm giá đặc biệt</li>
                   </ul>
@@ -229,7 +229,7 @@ export default function SettingsPage() {
                     className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-xl hover:from-amber-400 hover:to-orange-500 transition disabled:opacity-50 flex justify-center items-center gap-2"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
-                    Nâng cấp VIP (Free Test)
+                    Nâng cấp Premium (Free Test)
                   </button>
                 </div>
               )}

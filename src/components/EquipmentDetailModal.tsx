@@ -53,7 +53,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
     const res = await submitEquipmentReview({
       equipmentId: equipment.id,
       userName: currentUser.name || 'Thành viên GymGear',
-      userRole: currentUser.roleTitle || (currentUser.role === 'premium' ? 'Hội viên VIP' : 'Thành viên'),
+      userRole: currentUser.roleTitle || (currentUser.role === 'premium' ? 'Hội viên Premium' : 'Thành viên'),
       userAvatar: currentUser.avatar,
       rating: newRating,
       title: newTitle.trim() || 'Đánh giá trải nghiệm máy',
@@ -155,7 +155,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                   <div className="p-2.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 space-y-1">
                     <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-400">
                       <Crown className="w-4 h-4 text-amber-400 fill-amber-400" />
-                      <span>GIÁ ƯU ĐÃI ĐẠI LÝ (ĐẶC QUYỀN VIP/ADMIN):</span>
+                      <span>GIÁ ƯU ĐÃI ĐẠI LÝ (ĐẶC QUYỀN PREMIUM/ADMIN):</span>
                     </div>
                     <div className="text-lg font-black text-amber-300">
                       {equipment.vipPrice || 'Chiết khấu 15% khi chốt hợp đồng'}
@@ -167,7 +167,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                       <Lock className="w-3.5 h-3.5 text-amber-400" />
                       <span>Giá sỉ đại lý chiết khấu sâu (Khóa)</span>
                     </div>
-                    <span className="text-[11px] text-amber-400 font-bold">Nâng cấp VIP</span>
+                    <span className="text-[11px] text-amber-400 font-bold">Nâng cấp Premium</span>
                   </div>
                 )}
               </div>

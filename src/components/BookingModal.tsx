@@ -169,10 +169,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, sel
                   onChange={(e) => setFormData({ ...formData, bookingType: e.target.value as any })}
                   className="w-full bg-slate-950 text-slate-200 rounded-xl p-2.5 border border-slate-800 focus:border-amber-500 focus:outline-none"
                 >
-                  <option value="try-showroom">🔥 Đặt lịch tập thử trực tiếp tại Showroom (0đ)</option>
-                  <option value="request-quote">💰 Yêu cầu nhận báo giá ưu đãi & Chiết khấu đại lý</option>
-                  <option value="rent-equipment">🚚 Thuê thiết bị tập gym theo tháng</option>
-                  <option value="gym-setup-consulting">🏢 Tư vấn trọn gói thiết kế Setup phòng Gym</option>
+                  <option value="try-showroom">Đặt lịch tập thử trực tiếp tại Showroom (0đ)</option>
+                  <option value="request-quote">Yêu cầu nhận báo giá ưu đãi & Chiết khấu đại lý</option>
+                  <option value="rent-equipment">Thuê thiết bị tập gym theo tháng</option>
+                  <option value="gym-setup-consulting">Tư vấn trọn gói thiết kế Setup phòng Gym</option>
                 </select>
               </div>
 

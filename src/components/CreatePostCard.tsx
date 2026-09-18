@@ -254,7 +254,9 @@ export const CreatePostCard: React.FC<CreatePostCardProps> = ({ onAddPost }) => 
                       }}
                       className="w-12 bg-transparent text-amber-400 font-bold text-xs text-center outline-none"
                     />
-                    <span className="text-slate-400 text-[11px] font-bold">/ 5 ⭐</span>
+                    <span className="text-slate-400 text-[11px] font-bold inline-flex items-center gap-1">
+                      / 5 <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    </span>
                   </div>
                 </div>
               </div>

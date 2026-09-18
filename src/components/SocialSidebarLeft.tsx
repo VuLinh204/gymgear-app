@@ -47,7 +47,7 @@ export const SocialSidebarLeft: React.FC<SocialSidebarLeftProps> = ({
       return (
         <span className="notranslate inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40" translate="no">
           <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-          <span>VIP</span>
+          <span>PREMIUM</span>
         </span>
       );
     }
