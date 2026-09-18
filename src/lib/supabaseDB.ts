@@ -2498,7 +2498,7 @@ export async function deleteAIKnowledgeDoc(id: string): Promise<boolean> {
   return true;
 }
 
-// ── 🧠 AI RAG QUERY ENGINE (Tra cứu & sinh câu trả lời) ──────────────────────
+// ── 🧠 AI RAG QUERY ENGINE (Tra cứu và sinh câu trả lời) ─────────────────────
 export interface AIResponseResult {
   text: string;
   answer: string;
@@ -2542,7 +2542,7 @@ export async function generateAIResponse(
     ? providedDocs
     : await fetchAIKnowledgeDocs();
 
-  // 1. Kiem tra may tap khop trong CSDL equipments
+  // 1. Kiểm tra máy tập khớp trong CSDL equipments
   let matchedEquipment: Equipment | undefined;
   for (const eq of equipments) {
     const eqName = normalizeStr(eq.name);
@@ -2557,7 +2557,7 @@ export async function generateAIResponse(
     }
   }
 
-  // 2. Tim tai lieu khop nhat trong Kho Tri Thuc
+  // 2. Tìm tài liệu khớp nhất trong Kho Tri Thức
   let bestDoc: AIKnowledgeDoc | undefined;
   let highestScore = 0;
 
@@ -2566,7 +2566,7 @@ export async function generateAIResponse(
     const titleNorm = normalizeStr(doc.title);
     const contentNorm = normalizeStr(doc.content);
 
-    // Tinh diem tu khoa
+    // Tính điểm từ khóa
     if (doc.keywords && Array.isArray(doc.keywords)) {
       for (const kw of doc.keywords) {
         if (qNorm.includes(normalizeStr(kw))) {
@@ -2575,7 +2575,7 @@ export async function generateAIResponse(
       }
     }
 
-    // Tinh diem tieu de & noi dung
+    // Tính điểm tiêu đề và nội dung
     const words = qNorm.split(/\s+/).filter(w => w.length > 2);
     for (const w of words) {
       if (titleNorm.includes(w)) score += 2;
@@ -2588,7 +2588,7 @@ export async function generateAIResponse(
     }
   }
 
-  // 3. Xay dung cau tra loi AI
+  // 3. Xây dựng câu trả lời AI
   if (matchedEquipment) {
     const specs = matchedEquipment.specifications || ({} as any);
     const eq = matchedEquipment;
@@ -2601,14 +2601,14 @@ ${eq.vipPrice ? `- **Premium Price:** ${eq.vipPrice}\n` : ''}- **Max Load:** ${s
 - **Warranty:** ${specs.warranty || '5-year manufacturer warranty'}.
 
 ${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}This machine is available at: ${(eq.showroomLocations || ['Cau Giay Showroom', 'District 10 Showroom']).join(', ')}. Book a free test session today!`
-      : `Da chao ban! Ve thiet bi **${eq.name}** (${eq.brand}):
-- **Phan khuc:** ${eq.type === 'commercial' ? 'Commercial Grade chuyen dung phong tap 24/7' : 'Gia dinh cao cap'}.
-- **Gia tham khao:** ${eq.priceRange || `${(eq.estimatedPrice || 0).toLocaleString('vi-VN')} d`}.
-${eq.vipPrice ? `- **Gia uu dai Premium:** ${eq.vipPrice}\n` : ''}- **Tai trong toi da:** ${specs.weightCapacity || '200 kg'}.
-- **Kich thuoc:** ${specs.dimensions || 'Tieu chuan thuong mai'}.
-- **Bao hanh:** ${specs.warranty || '5 nam chinh hang'}.
+      : `Dạ chào bạn! Về thiết bị **${eq.name}** (${eq.brand}):
+    - **Phân khúc:** ${eq.type === 'commercial' ? 'Commercial Grade chuyên dụng phòng tập 24/7' : 'Gia đình cao cấp'}.
+    - **Giá tham khảo:** ${eq.priceRange || `${(eq.estimatedPrice || 0).toLocaleString('vi-VN')} đ`}.
+    ${eq.vipPrice ? `- **Giá ưu đãi Premium:** ${eq.vipPrice}\n` : ''}- **Tải trọng tối đa:** ${specs.weightCapacity || '200 kg'}.
+    - **Kích thước:** ${specs.dimensions || 'Tiêu chuẩn thương mại'}.
+    - **Bảo hành:** ${specs.warranty || '5 năm chính hãng'}.
 
-${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}Hien thiet bi co san tai cac Showroom: ${(eq.showroomLocations || ['Showroom Cau Giay', 'Showroom Quan 10']).join(', ')}. Ban co the dat lich trai nghiem thu may mien phi 0d ngay hom nay!`;
+${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}Hiện thiết bị có sẵn tại các Showroom: ${(eq.showroomLocations || ['Showroom Cầu Giấy', 'Showroom Quận 10']).join(', ')}. Bạn có thể đặt lịch trải nghiệm thử máy miễn phí 0đ ngay hôm nay!`;
 
     return {
       text: answer,
@@ -2617,7 +2617,7 @@ ${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}Hien thiet bi co san tai cac Showroo
       sourceDoc: bestDoc,
       sourceTitle: isEnglish
         ? `GymGear Equipment DB: ${eq.name}`
-        : `Co so du lieu Thiet Bi GymGear: ${eq.name}`,
+        : `Cơ sở dữ liệu thiết bị GymGear: ${eq.name}`,
       category: 'equipment'
     };
   }
@@ -2625,7 +2625,7 @@ ${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}Hien thiet bi co san tai cac Showroo
   if (bestDoc && highestScore >= 2) {
     const answer = isEnglish
       ? `Hi there! Based on our knowledge base — **${bestDoc.title}**:\n\n${bestDoc.content}\n\nFeel free to ask follow-up questions or book a free showroom session!`
-      : `Da chao ban! Dua tren thong tin trong tai lieu **${bestDoc.title}**:\n\n${bestDoc.content}\n\nNeu ban can tu van them chi tiet hoac muon dat lich trai nghiem thuc te tai Showroom, ban co the nhan cau hoi tiep theo hoac de lai so dien thoai de chuyen vien lien he nhe!`;
+      : `Dạ chào bạn! Dựa trên thông tin trong tài liệu **${bestDoc.title}**:\n\n${bestDoc.content}\n\nNếu bạn cần tư vấn thêm chi tiết hoặc muốn đặt lịch trải nghiệm thực tế tại Showroom, bạn có thể đặt câu hỏi tiếp theo hoặc để lại số điện thoại để chuyên viên liên hệ nhé!`;
 
     return {
       text: answer,
@@ -2636,15 +2636,15 @@ ${eq.excerpt ? `> *${eq.excerpt}*\n\n` : ''}Hien thiet bi co san tai cac Showroo
     };
   }
 
-  // 4. Phan hoi chung
+  // 4. Phản hồi chung
   const answer = isEnglish
     ? `Hi! I'm the GymGear AI Assistant. I can help you with:\n- Technical specs on 60+ equipment lines (Impulse, DHZ, Panatta, Life Fitness...),\n- Premium pricing & discounts,\n- Free showroom test sessions,\n- Workout plans (Push-Pull-Legs, Upper-Lower splits).\n\nJust ask me anything!`
-    : `Da chao ban! Minh la Tro ly AI GymGear:\n- Minh co the ho tro ban tu van thong so ky thuat cua hon 60+ dong may tap (Impulse, DHZ, Panatta, Life Fitness...), bao gia uu dai Premium, lich dat thu may Showroom 0d va lich tap khoa hoc (Push-Pull-Legs, Upper-Lower).\n- Ban co the hoi ve bat ky dong may nao hoac chu de ban quan tam. Du lieu duoc ban quan tri GymGear cap nhat thuong xuyen tren he thong!`;
+    : `Dạ chào bạn! Mình là Trợ lý AI GymGear:\n- Mình có thể hỗ trợ bạn tư vấn thông số kỹ thuật của hơn 60+ dòng máy tập (Impulse, DHZ, Panatta, Life Fitness...), báo giá ưu đãi Premium, lịch đặt thử máy Showroom 0đ và lịch tập khoa học (Push-Pull-Legs, Upper-Lower).\n- Bạn có thể hỏi về bất kỳ dòng máy nào hoặc chủ đề bạn quan tâm. Dữ liệu được ban quản trị GymGear cập nhật thường xuyên trên hệ thống!`;
 
   return {
     text: answer,
     answer,
-    sourceTitle: isEnglish ? 'GymGear AI Assistant Knowledge Base' : 'Co so tri thuc Tro ly AI GymGear'
+    sourceTitle: isEnglish ? 'GymGear AI Assistant Knowledge Base' : 'Cơ sở tri thức Trợ lý AI GymGear'
   };
 }
 
