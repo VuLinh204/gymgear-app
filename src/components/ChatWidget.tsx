@@ -20,8 +20,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import {
-  fetchEquipments,
-  generateAIResponse,
   fetchAIKnowledgeDocs,
   createAIKnowledgeDoc,
   deleteAIKnowledgeDoc,
@@ -67,7 +65,7 @@ function buildWelcome(): ChatMsg {
   return {
     id: 'welcome',
     role: 'ai',
-    text: 'Xin chào! Tôi là GymGear AI Assistant. Tôi có thể tư vấn về máy tập, chính sách giá, lịch luyện tập và dinh dưỡng. Hãy đặt câu hỏi bất cứ lúc nào!\n\nNếu bạn muốn được tư vấn trực tiếp từ admin, hãy bấm "Cho Admin" phía dưới.',
+    text: 'Xin chào! Tôi là GymGear AI Assistant. Tôi có thể tư vấn về máy tập, chính sách giá, lịch luyện tập và dinh dưỡng. Hãy đặt câu hỏi bất cứ lúc nào!\n\nNếu bạn muốn được tư vấn trực tiếp từ admin, hãy bấm "Liên hệ Admin" phía trên.',
     createdAt: new Date(),
     status: 'sent',
   };
@@ -93,11 +91,9 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
   const [newDocContent, setNewDocContent] = useState('');
   const [newDocCategory, setNewDocCategory] = useState<AIKnowledgeDoc['category']>('custom');
   const [newDocKeywords, setNewDocKeywords] = useState('');
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { fetchEquipments().then(setEquipments); }, []);
 
   useEffect(() => {
     if (activeTab === 'kb') {
@@ -182,7 +178,13 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
     await new Promise((r) => setTimeout(r, 800 + Math.random() * 600));
 
     try {
-      const result: AIResponseResult = await generateAIResponse(textToSend, equipments);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: textToSend }),
+      });
+      const result: AIResponseResult & { error?: string } = await response.json();
+      if (!response.ok) throw new Error(result.error || 'AI request failed');
       const aiMsg: ChatMsg = {
         id: `ai-${Date.now()}`,
         role: 'ai',
@@ -193,11 +195,13 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
         status: 'sent',
       };
       setMessages((prev) => [...prev, aiMsg]);
-    } catch {
+    } catch (error) {
       const errMsg: ChatMsg = {
         id: `err-${Date.now()}`,
         role: 'ai',
-        text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.',
+        text: error instanceof Error
+          ? error.message
+          : 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.',
         createdAt: new Date(),
         status: 'error',
       };
@@ -409,16 +413,62 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
               </div>
 
               {showAddForm && (
-                <div className="shrink-0 p-3 border-b border-slate-700 bg-slate-800/50 space-y-2">
-                  <input type="text" value={newDocTitle} onChange={(e) => setNewDocTitle(e.target.value)} placeholder="Tieu de tai lieu..." className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500" />
-                  <select value={newDocCategory} onChange={(e) => setNewDocCategory(e.target.value as AIKnowledgeDoc['category'])} className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-amber-500">
-                    {Object.entries(CATEGORY_LABELS).map(([val, label]) => (<option key={val} value={val}>{label}</option>))}
-                  </select>
-                  <textarea value={newDocContent} onChange={(e) => setNewDocContent(e.target.value)} placeholder="Noi dung tai lieu (AI se hoc tu day)..." rows={3} className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none" />
-                  <input type="text" value={newDocKeywords} onChange={(e) => setNewDocKeywords(e.target.value)} placeholder="Tu khoa (cach nhau bang dau phay)..." className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500" />
+                <div className="shrink-0 p-3 border-b border-slate-700 bg-slate-800/60 space-y-2">
+                  <input
+                    type="text"
+                    value={newDocTitle}
+                    onChange={(e) => setNewDocTitle(e.target.value)}
+                    placeholder="Tiêu đề tài liệu..."
+                    className="w-full px-3 py-2 bg-slate-950/80 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
+                  />
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-slate-400 font-medium px-0.5">Danh mục</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setNewDocCategory(val as AIKnowledgeDoc['category'])}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all ${newDocCategory === val
+                            ? 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/30'
+                            : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-amber-500/50 hover:text-amber-300'
+                            }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={newDocContent}
+                    onChange={(e) => setNewDocContent(e.target.value)}
+                    placeholder="Nội dung tài liệu (AI sẽ học từ đây)..."
+                    rows={3}
+                    className="w-full px-3 py-2 bg-slate-950/80 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 resize-none transition"
+                  />
+                  <input
+                    type="text"
+                    value={newDocKeywords}
+                    onChange={(e) => setNewDocKeywords(e.target.value)}
+                    placeholder="Từ khóa (cách nhau bằng dấu phẩy)..."
+                    className="w-full px-3 py-2 bg-slate-950/80 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
+                  />
                   <div className="flex gap-2">
-                    <button onClick={handleAddDoc} disabled={!newDocTitle.trim() || !newDocContent.trim()} className="flex-1 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-400 disabled:opacity-40 transition">Luu tai lieu</button>
-                    <button onClick={() => setShowAddForm(false)} className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition">Huy</button>
+                    <button
+                      onClick={handleAddDoc}
+                      disabled={!newDocTitle.trim() || !newDocContent.trim()}
+                      className="flex-1 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-400 disabled:opacity-40 transition"
+                    >
+                      Lưu tài liệu
+                    </button>
+                    <button
+                      onClick={() => setShowAddForm(false)}
+                      className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition"
+                    >
+                      Hủy
+                    </button>
                   </div>
                 </div>
               )}
