@@ -18,6 +18,8 @@ import {
   ChevronUp,
   AlertCircle,
   RotateCcw,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import {
   fetchAIKnowledgeDocs,
@@ -78,6 +80,7 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'kb'>('chat');
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([buildWelcome()]);
   const [mode, setMode] = useState<'ai' | 'waiting'>('ai');
   const [countdown, setCountdown] = useState(WAIT_SECS);
@@ -256,7 +259,12 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
       )}
 
       {isOpen && (
-        <div className="w-[92vw] sm:w-[400px] h-[580px] max-h-[88vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div
+          className={`bg-slate-900 border border-slate-700/80 rounded-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 transition-[width,height,transform,box-shadow] ease-[cubic-bezier(0.16,1,0.3,1)] duration-500 ${isExpanded
+            ? 'w-[calc(100vw-2rem)] sm:w-[min(960px,calc(100vw-2rem))] h-[calc(100vh-2rem)] sm:h-[min(760px,calc(100vh-2rem))] max-h-[calc(100vh-2rem)] shadow-[0_24px_80px_rgba(0,0,0,0.5)]'
+            : 'w-[92vw] sm:w-[400px] h-[580px] max-h-[88vh] shadow-2xl'
+            }`}
+        >
 
           {/* Header */}
           <div className="shrink-0 px-4 py-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/60 flex items-center justify-between gap-2">
@@ -275,6 +283,14 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsExpanded((expanded) => !expanded)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition"
+                title={isExpanded ? 'Thu nhỏ cửa sổ chat' : 'Phóng to cửa sổ chat'}
+                aria-label={isExpanded ? 'Thu nhỏ cửa sổ chat' : 'Phóng to cửa sổ chat'}
+              >
+                {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              </button>
               <button onClick={handleReset} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition" title="Reset">
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
