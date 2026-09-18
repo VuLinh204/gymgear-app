@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchAIKnowledgeDocs, fetchEquipments } from '@/lib/supabaseDB';
+import { fetchAIKnowledgeDocs, fetchEquipments, generateAIResponse } from '@/lib/supabaseDB';
 import type { AIKnowledgeDoc, Equipment } from '@/types';
 
 export const runtime = 'nodejs';
@@ -70,6 +70,17 @@ function jsonResponse(data: unknown, status = 200): NextResponse {
   return new NextResponse(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  });
+}
+
+async function buildDataFallback(question: string, equipments: Equipment[], documents: AIKnowledgeDoc[]) {
+  const fallback = await generateAIResponse(question, equipments, documents);
+  return jsonResponse({
+    text: fallback.text || fallback.answer,
+    answer: fallback.answer,
+    matchedEquipment: fallback.matchedEquipment ? publicEquipment(fallback.matchedEquipment) : undefined,
+    sourceTitle: fallback.sourceTitle || 'Dữ liệu GymGear',
+    fallback: true,
   });
 }
 
@@ -172,10 +183,7 @@ export async function POST(request: Request) {
       }
 
       if (response.status === 429) {
-        return jsonResponse(
-          { error: 'AI đã vượt hạn mức sử dụng. Vui lòng kiểm tra quota hoặc billing của nhà cung cấp.' },
-          429
-        );
+        return buildDataFallback(question, equipments, documents);
       }
 
       if (response.status === 503 || response.status === 500 || response.status === 502 || response.status === 504) {
