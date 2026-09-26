@@ -8,22 +8,24 @@ interface EquipmentCardProps {
   equipment: Equipment;
   onViewDetail: (item: Equipment) => void;
   onBook: (item: Equipment) => void;
+  onToggleCompare?: (item: Equipment) => void;
+  isSelectedForCompare?: boolean;
 }
 
-export const EquipmentCard: React.FC<EquipmentCardProps> = ({ equipment, onViewDetail, onBook }) => {
+export const EquipmentCard: React.FC<EquipmentCardProps> = ({ equipment, onViewDetail, onBook, onToggleCompare, isSelectedForCompare = false }) => {
   const targetMuscleText = equipment.specifications.targetMuscles?.slice(0, 2).join(' • ');
 
   return (
     <div className="group relative bg-slate-900/90 rounded-2xl border border-slate-800 hover:border-slate-700 shadow-xl transition-all duration-300 flex flex-col overflow-hidden ring-1 ring-white/5 hover:ring-white/10">
       
       {/* Image Header with Hallmark Machine Spec HUD */}
-      <div className="relative h-60 w-full overflow-hidden bg-slate-950 cursor-pointer" onClick={() => onViewDetail(equipment)}>
+      <div className="relative h-60 w-full overflow-hidden bg-slate-950 cursor-pointer p-3" onClick={() => onViewDetail(equipment)}>
         <img
           src={equipment.thumbnail}
           alt={equipment.name}
-          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out"
+          className="w-full h-full object-contain transform group-hover:scale-[1.02] transition-transform duration-500 ease-out"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-slate-950/90 via-slate-950/10 to-transparent"></div>
         
         {/* Brand & Machine Grade Badges */}
         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 z-10">
@@ -44,10 +46,25 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({ equipment, onViewD
 
         {/* Rating Badge */}
         <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-slate-950/85 backdrop-blur-md border border-slate-700/80 flex items-center space-x-1 shadow-md z-10">
-          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-          <span className="text-xs font-bold text-white">{equipment.rating}</span>
-          <span className="text-[10px] text-slate-400">({equipment.reviewCount})</span>
+          {equipment.reviewCount > 0 ? (
+            <>
+              <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span className="text-xs font-bold text-white">{equipment.rating}</span>
+              <span className="text-[10px] text-slate-400">({equipment.reviewCount})</span>
+            </>
+          ) : <span className="text-[10px] font-semibold text-slate-300">Sản phẩm</span>}
         </div>
+
+        {onToggleCompare && (
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); onToggleCompare(equipment); }}
+            className={`absolute right-3 bottom-12 z-20 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold text-white shadow ${isSelectedForCompare ? 'bg-blue-600 border-blue-400' : 'bg-slate-950/90 border-slate-600 hover:border-white'}`}
+            aria-pressed={isSelectedForCompare}
+          >
+            {isSelectedForCompare ? 'Đã chọn so sánh' : 'Chọn so sánh'}
+          </button>
+        )}
 
         {/* Hallmark HUD: Bottom overlay tags on machine image */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
@@ -103,11 +120,11 @@ export const EquipmentCard: React.FC<EquipmentCardProps> = ({ equipment, onViewD
             )}
             <div className="flex items-center justify-between">
               <span className="text-slate-400">Tải trọng tối đa:</span>
-              <span className="font-bold text-slate-200">{equipment.specifications.weightCapacity}</span>
+              <span className="font-bold text-slate-200">{equipment.specifications.weightCapacity || 'Chưa có dữ liệu'}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-slate-400">Bảo hành chính hãng:</span>
-              <span className="font-bold text-emerald-400">{equipment.specifications.warranty}</span>
+              <span className="font-bold text-slate-200">{equipment.specifications.warranty || 'Chưa có dữ liệu'}</span>
             </div>
           </div>
 

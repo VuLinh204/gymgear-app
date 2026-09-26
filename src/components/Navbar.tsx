@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn,
+  Search, CalendarCheck, Bell, Menu, X, Crown, ShieldAlert, LogIn, BookOpen, Dumbbell,
   UserPlus, LogOut, ChevronDown, User, Settings, Sun, Moon, HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
@@ -67,6 +67,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </Link>
           </div>
 
+          <nav className="hidden lg:flex items-center gap-4 text-xs font-bold text-slate-300">
+            <Link href="/equipment" className="hover:text-white">Thiết bị</Link>
+            <Link href="/articles" className="hover:text-white">Bài viết</Link>
+          </nav>
+
           {/* ── Search (Spotlight Trigger) ─────────────────────────────────── */}
           <div className="hidden md:flex flex-1 max-w-[220px] lg:max-w-xs xl:max-w-md min-w-0">
             <div 
@@ -85,6 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>K</span>
               </div>
             </div>
+
           </div>
 
           {/* ── Right controls ────────────────────────────────────────────── */}
@@ -246,6 +252,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onChange={handleSearch}
                 className="w-full bg-slate-900 text-slate-200 text-xs rounded-xl pl-10 pr-4 py-2.5 border border-slate-800"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Link href="/equipment" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900 py-3 font-bold text-white"><Dumbbell className="h-4 w-4 text-blue-300" /> Thiết bị</Link>
+              <Link href="/articles" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900 py-3 font-bold text-white"><BookOpen className="h-4 w-4 text-blue-300" /> Bài viết</Link>
             </div>
 
             <div className="flex items-center justify-between py-1 border-b border-slate-800/80">

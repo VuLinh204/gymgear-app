@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Equipment, EquipmentReview } from '@/types';
 import { fetchEquipmentReviews, submitEquipmentReview } from '@/lib/supabaseDB';
-import { X, Star, ShieldCheck, CheckCircle2, XCircle, MapPin, CalendarCheck, Crown, Award, Lock, MessageSquare, Send, Loader2, Plus } from 'lucide-react';
+import { X, Star, ShieldCheck, CheckCircle2, XCircle, MapPin, CalendarCheck, Crown, Award, Lock, MessageSquare, Send, Loader2, Plus, ExternalLink } from 'lucide-react';
 
 interface EquipmentDetailModalProps {
   equipment: Equipment | null;
@@ -106,7 +106,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                 <img
                   src={selectedImage || undefined}
                   alt={equipment.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain p-4"
                 />
               </div>
               
@@ -176,8 +176,20 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                 {equipment.fullDescription}
               </p>
 
+              {equipment.sourceUrl && (
+                <a
+                  href={equipment.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-300 underline-offset-4 hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Xem thông tin trên Life Fitness
+                </a>
+              )}
+
               {/* Showroom List Tag */}
-              {equipment.showroomLocations && (
+              {equipment.showroomLocations && equipment.showroomLocations.length > 0 && (
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1">
                   <div className="flex items-center space-x-1.5 font-bold text-emerald-400">
                     <MapPin className="w-4 h-4" />
@@ -267,19 +279,19 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                 {equipment.specifications?.weightCapacity && (
                   <div className="grid grid-cols-3 p-3">
                     <span className="text-slate-400 font-medium">Tải Trọng Tối Đa</span>
-                    <span className="col-span-2 text-white font-bold">{equipment.specifications.weightCapacity}</span>
+                    <span className="col-span-2 text-white font-bold">{equipment.specifications.weightCapacity || 'Chưa có dữ liệu'}</span>
                   </div>
                 )}
                 {equipment.specifications?.dimensions && (
                   <div className="grid grid-cols-3 p-3">
                     <span className="text-slate-400 font-medium">Kích Thước (DxRxC)</span>
-                    <span className="col-span-2 text-white font-mono">{equipment.specifications.dimensions}</span>
+                    <span className="col-span-2 text-white font-mono">{equipment.specifications.dimensions || 'Chưa có dữ liệu'}</span>
                   </div>
                 )}
                 {equipment.specifications?.machineWeight && (
                   <div className="grid grid-cols-3 p-3">
                     <span className="text-slate-400 font-medium">Trọng Lượng Máy</span>
-                    <span className="col-span-2 text-white font-bold">{equipment.specifications.machineWeight}</span>
+                    <span className="col-span-2 text-white font-bold">{equipment.specifications.machineWeight || 'Chưa có dữ liệu'}</span>
                   </div>
                 )}
                 {equipment.specifications?.targetMuscles && (
@@ -291,7 +303,7 @@ export const EquipmentDetailModal: React.FC<EquipmentDetailModalProps> = ({ equi
                 {equipment.specifications?.warranty && (
                   <div className="grid grid-cols-3 p-3">
                     <span className="text-slate-400 font-medium">Chính Sách Bảo Hành</span>
-                    <span className="col-span-2 text-emerald-400 font-bold">{equipment.specifications.warranty}</span>
+                    <span className="col-span-2 text-white font-bold">{equipment.specifications.warranty || 'Chưa có dữ liệu'}</span>
                   </div>
                 )}
               </div>

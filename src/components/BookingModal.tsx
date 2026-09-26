@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Equipment, BookingRequest } from '@/types';
 import { submitBooking } from '@/lib/supabaseDB';
@@ -23,6 +23,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, sel
     equipmentName: selectedEquipment?.name || 'Tư vấn tổng hợp thiết bị gym',
     bookingType: 'try-showroom',
     preferredDate: '',
+    preferredTime: '',
     preferredLocation: 'Showroom TP.HCM - Quận 10',
     note: ''
   });
@@ -31,6 +32,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, sel
   const [submitted, setSubmitted] = useState(false);
   const [responseMsg, setResponseMsg] = useState('');
   const [createdBooking, setCreatedBooking] = useState<BookingRequest | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setFormData((current) => ({
+      ...current,
+      equipmentId: selectedEquipment?.id || 'general-consultation',
+      equipmentName: selectedEquipment?.name || 'Tư vấn tổng hợp thiết bị gym',
+    }));
+  }, [isOpen, selectedEquipment?.id, selectedEquipment?.name]);
 
   if (!isOpen) return null;
 
@@ -173,6 +183,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, sel
                   <option value="request-quote">Yêu cầu nhận báo giá ưu đãi & Chiết khấu đại lý</option>
                   <option value="rent-equipment">Thuê thiết bị tập gym theo tháng</option>
                   <option value="gym-setup-consulting">Tư vấn trọn gói thiết kế Setup phòng Gym</option>
+                  <option value="personal-training">Đặt buổi tập PT cá nhân</option>
+                  <option value="group-class">Đặt lớp tập nhóm</option>
                 </select>
               </div>
 
@@ -199,12 +211,27 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, sel
                 <div>
                   <label className="block text-slate-300 font-medium mb-1 flex items-center space-x-1">
                     <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Ngày dự kiến thử</span>
+                    <span>Ngày hẹn *</span>
                   </label>
                   <input
                     type="date"
+                    required
+                    min={new Date().toISOString().slice(0, 10)}
                     value={formData.preferredDate}
                     onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })}
+                    className="w-full bg-slate-950 text-slate-200 rounded-xl p-2.5 border border-slate-800 focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1 flex items-center space-x-1">
+                    <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Giờ hẹn *</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={formData.preferredTime}
+                    onChange={(e) => setFormData({ ...formData, preferredTime: e.target.value })}
                     className="w-full bg-slate-950 text-slate-200 rounded-xl p-2.5 border border-slate-800 focus:border-amber-500 focus:outline-none"
                   />
                 </div>

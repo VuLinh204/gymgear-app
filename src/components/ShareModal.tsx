@@ -95,10 +95,7 @@ export default function ShareModal({ post, onClose }: ShareModalProps) {
   ];
 
   return (
-    <div 
-      className="fixed inset-0 z-[120] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200" />
 

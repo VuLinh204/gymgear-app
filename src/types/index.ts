@@ -20,6 +20,7 @@ export interface Equipment {
   slug: string;
   brand: string;
   brandLogo?: string;
+  sourceUrl?: string;
   category: CategoryType;
   type: EquipmentType;
   modelNumber: string;
@@ -89,8 +90,9 @@ export interface BookingRequest {
   customerEmail: string;
   equipmentId: string;
   equipmentName?: string;
-  bookingType: 'try-showroom' | 'request-quote' | 'rent-equipment' | 'gym-setup-consulting';
+  bookingType: 'try-showroom' | 'request-quote' | 'rent-equipment' | 'gym-setup-consulting' | 'personal-training' | 'group-class';
   preferredDate?: string;
+  preferredTime?: string;
   preferredLocation?: string;
   note?: string;
   status?: 'pending' | 'confirmed' | 'completed' | 'cancelled';
@@ -142,4 +144,3 @@ export interface AIKnowledgeDoc {
   updatedAt: string;
   authorName?: string;
 }
-

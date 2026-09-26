@@ -245,6 +245,15 @@ export default function SpotlightSearchModal({
           <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-[10px] text-slate-400 font-mono">
             <span>ESC</span>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng tìm kiếm"
+            title="Đóng tìm kiếm"
+            className="ml-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 transition hover:border-slate-500 hover:bg-slate-700 hover:text-white active:translate-y-0.5"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
 
         {/* Categories Tab Bar */}

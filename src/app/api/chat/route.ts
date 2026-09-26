@@ -29,6 +29,7 @@ function publicEquipment(equipment: Equipment) {
     category: equipment.category,
     type: equipment.type,
     modelNumber: equipment.modelNumber,
+    sourceUrl: equipment.sourceUrl,
     priceRange: equipment.priceRange,
     estimatedPrice: equipment.estimatedPrice,
     excerpt: equipment.excerpt,

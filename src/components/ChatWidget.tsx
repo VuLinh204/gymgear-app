@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import {
   MessageCircle,
+  Calendar,
   X,
   Send,
   Bot,
@@ -46,6 +47,7 @@ interface ChatMsg {
 
 interface ChatWidgetProps {
   onOpenEquipmentDetail?: (equipmentId: string) => void;
+  onOpenBooking?: () => void;
 }
 
 const WAIT_SECS = 300;
@@ -76,7 +78,7 @@ function buildWelcome(): ChatMsg {
   };
 }
 
-export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
+export default function ChatWidget({ onOpenEquipmentDetail, onOpenBooking }: ChatWidgetProps) {
   const { currentUser, isAdmin } = useAuth();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -402,6 +404,16 @@ export default function ChatWidget({ onOpenEquipmentDetail }: ChatWidgetProps) {
                   Liên hệ Admin
                 </button>
               </div>
+              {onOpenBooking && (
+                <button
+                  type="button"
+                  onClick={onOpenBooking}
+                  className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white transition hover:bg-amber-400 active:translate-y-0.5"
+                >
+                  <Calendar className="h-3 w-3" />
+                  Đặt lịch
+                </button>
+              )}
             </div>
           )}
 

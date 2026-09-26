@@ -36,16 +36,15 @@ export default function EquipmentCompareModal({
   const [equip2Id, setEquip2Id] = useState<string>(initialEquip2?.id || '');
 
   useEffect(() => {
+    if (!isOpen) return;
+    setEquip1Id(initialEquip1?.id || '');
+    setEquip2Id(initialEquip2?.id || '');
     fetchEquipments().then(data => {
       setEquipments(data);
-      if (!equip1Id && data.length > 0) {
-        setEquip1Id(initialEquip1?.id || data[0].id);
-      }
-      if (!equip2Id && data.length > 1) {
-        setEquip2Id(initialEquip2?.id || data[1].id);
-      }
+      if (data.length > 0) setEquip1Id(initialEquip1?.id || data[0].id);
+      if (data.length > 1) setEquip2Id(initialEquip2?.id || data.find((item) => item.id !== (initialEquip1?.id || data[0].id))?.id || data[1].id);
     });
-  }, [isOpen]);
+  }, [isOpen, initialEquip1?.id, initialEquip2?.id]);
 
   if (!isOpen) return null;
 
@@ -106,8 +105,8 @@ export default function EquipmentCompareModal({
                 ))}
               </select>
 
-              <div className="relative w-full h-36 sm:h-48 rounded-xl overflow-hidden mb-3 border border-slate-800">
-                <img src={equip1.thumbnail} alt={equip1.name} className="w-full h-full object-cover" />
+              <div className="relative w-full h-52 sm:h-72 rounded-xl overflow-hidden mb-3 border border-slate-800 bg-black/30 p-3">
+                <img src={equip1.thumbnail} alt={equip1.name} className="w-full h-full object-contain" />
                 <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-[10px] font-bold text-amber-400 border border-amber-500/30">
                   {equip1.brand}
                 </span>
@@ -144,8 +143,8 @@ export default function EquipmentCompareModal({
               </select>
 
 
-              <div className="relative w-full h-36 sm:h-48 rounded-xl overflow-hidden mb-3 border border-slate-800">
-                <img src={equip2.thumbnail} alt={equip2.name} className="w-full h-full object-cover" />
+              <div className="relative w-full h-52 sm:h-72 rounded-xl overflow-hidden mb-3 border border-slate-800 bg-black/30 p-3">
+                <img src={equip2.thumbnail} alt={equip2.name} className="w-full h-full object-contain" />
                 <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-[10px] font-bold text-orange-400 border border-orange-500/30">
                   {equip2.brand}
                 </span>
@@ -186,25 +185,25 @@ export default function EquipmentCompareModal({
               {/* Row 2: Động cơ / Công suất */}
               <div className="grid grid-cols-12 p-3 bg-slate-900/40">
                 <div className="col-span-4 text-slate-400 font-medium">Động cơ / Công suất</div>
-                <div className="col-span-4 text-slate-200 font-semibold">{equip1.specifications?.powerOutput || 'Khung cơ học'}</div>
-                <div className="col-span-4 text-slate-200 font-semibold">{equip2.specifications?.powerOutput || 'Khung cơ học'}</div>
+                <div className="col-span-4 text-slate-200 font-semibold">{equip1.specifications?.powerOutput || 'Chưa có dữ liệu'}</div>
+                <div className="col-span-4 text-slate-200 font-semibold">{equip2.specifications?.powerOutput || 'Chưa có dữ liệu'}</div>
               </div>
 
               {/* Row 3: Tải trọng người tập */}
               <div className="grid grid-cols-12 p-3 bg-slate-950/40">
                 <div className="col-span-4 text-slate-400 font-medium">Tải trọng tối đa</div>
-                <div className="col-span-4 text-slate-200">{equip1.specifications?.weightCapacity || '150 - 200 kg'}</div>
-                <div className="col-span-4 text-slate-200">{equip2.specifications?.weightCapacity || '150 - 200 kg'}</div>
+                <div className="col-span-4 text-slate-200">{equip1.specifications?.weightCapacity || 'Chưa có dữ liệu'}</div>
+                <div className="col-span-4 text-slate-200">{equip2.specifications?.weightCapacity || 'Chưa có dữ liệu'}</div>
               </div>
 
               {/* Row 4: Kích thước & Cân nặng máy */}
               <div className="grid grid-cols-12 p-3 bg-slate-900/40">
                 <div className="col-span-4 text-slate-400 font-medium">Kích thước & Trọng lượng</div>
                 <div className="col-span-4 text-slate-300">
-                  {equip1.specifications?.dimensions || 'Chuẩn Showroom'} • {equip1.specifications?.machineWeight || 'N/A'}
+                  {equip1.specifications?.dimensions || 'Chưa có dữ liệu'} • {equip1.specifications?.machineWeight || 'Chưa có dữ liệu'}
                 </div>
                 <div className="col-span-4 text-slate-300">
-                  {equip2.specifications?.dimensions || 'Chuẩn Showroom'} • {equip2.specifications?.machineWeight || 'N/A'}
+                  {equip2.specifications?.dimensions || 'Chưa có dữ liệu'} • {equip2.specifications?.machineWeight || 'Chưa có dữ liệu'}
                 </div>
               </div>
 
@@ -214,10 +213,10 @@ export default function EquipmentCompareModal({
                   <Dumbbell className="w-3.5 h-3.5 text-amber-400" /> Nhóm cơ tác động
                 </div>
                 <div className="col-span-4 text-slate-300">
-                  {equip1.specifications?.targetMuscles?.join(', ') || 'Toàn thân'}
+                  {equip1.specifications?.targetMuscles?.join(', ') || 'Chưa có dữ liệu'}
                 </div>
                 <div className="col-span-4 text-slate-300">
-                  {equip2.specifications?.targetMuscles?.join(', ') || 'Toàn thân'}
+                  {equip2.specifications?.targetMuscles?.join(', ') || 'Chưa có dữ liệu'}
                 </div>
               </div>
 
@@ -226,8 +225,8 @@ export default function EquipmentCompareModal({
                 <div className="col-span-4 text-slate-400 font-medium flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Chế độ bảo hành
                 </div>
-                <div className="col-span-4 text-emerald-300 font-semibold">{equip1.specifications?.warranty || '3 - 5 năm'}</div>
-                <div className="col-span-4 text-emerald-300 font-semibold">{equip2.specifications?.warranty || '3 - 5 năm'}</div>
+                <div className="col-span-4 text-slate-200">{equip1.specifications?.warranty || 'Chưa có dữ liệu'}</div>
+                <div className="col-span-4 text-slate-200">{equip2.specifications?.warranty || 'Chưa có dữ liệu'}</div>
               </div>
 
               {/* Row 7: Đánh giá Gymer */}
@@ -236,12 +235,10 @@ export default function EquipmentCompareModal({
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> Đánh giá cộng đồng
                 </div>
                 <div className="col-span-4 text-slate-200 font-bold flex items-center">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 inline mr-1" />
-                  <span>{equip1.rating || 4.8}/5.0 ({equip1.reviewCount || 20} đánh giá)</span>
+                  {equip1.reviewCount > 0 ? <><Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 inline mr-1" /><span>{equip1.rating}/5.0 ({equip1.reviewCount} đánh giá)</span></> : 'Chưa có đánh giá'}
                 </div>
                 <div className="col-span-4 text-slate-200 font-bold flex items-center">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 inline mr-1" />
-                  <span>{equip2.rating || 4.8}/5.0 ({equip2.reviewCount || 20} đánh giá)</span>
+                  {equip2.reviewCount > 0 ? <><Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 inline mr-1" /><span>{equip2.rating}/5.0 ({equip2.reviewCount} đánh giá)</span></> : 'Chưa có đánh giá'}
                 </div>
               </div>
 

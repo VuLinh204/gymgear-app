@@ -322,14 +322,13 @@ export async function fetchBookings(): Promise<BookingRequest[]> {
     customerPhone: b.customer_phone, customerEmail: b.customer_email,
     equipmentId: b.equipment_id, equipmentName: b.equipment_name,
     bookingType: b.booking_type, preferredDate: b.preferred_date,
-    preferredLocation: b.preferred_location, note: b.note,
+    preferredLocation: b.preferred_location, preferredTime: b.preferred_time, note: b.note,
     status: b.status, userRole: b.user_role, createdAt: b.created_at
   }));
 }
 
 // ── TẠO BOOKING (Hỗ trợ cả khách vãng lai & thành viên qua API / Supabase) ────
 export async function submitBooking(booking: BookingRequest): Promise<{ success: boolean; id?: string; error?: string }> {
-  // 1. Thử gửi qua API server /api/booking để vượt qua RLS an toàn
   try {
     const res = await fetch('/api/booking', {
       method: 'POST',
@@ -337,48 +336,12 @@ export async function submitBooking(booking: BookingRequest): Promise<{ success:
       body: JSON.stringify(booking),
     });
     const result = await res.json();
-    if (result.success) {
-      return { success: true, id: result.id };
-    }
+    if (result.success) return { success: true, id: result.id };
+    return { success: false, error: result.error || 'Không thể tạo lịch.' };
   } catch (apiErr) {
-    console.warn('API /api/booking unavailable, fallback to direct supabase insert:', apiErr);
+    console.error('API /api/booking unavailable:', apiErr);
+    return { success: false, error: 'Không kết nối được máy chủ đặt lịch. Vui lòng thử lại.' };
   }
-
-  // 2. Fallback trực tiếp qua Supabase client
-  const bookingId = booking.id || `BK-${Math.floor(10000 + Math.random() * 90000)}`;
-  const { data, error } = await supabase.from('bookings').insert({
-    id: bookingId,
-    customer_name: booking.customerName,
-    customer_phone: booking.customerPhone,
-    customer_email: booking.customerEmail || null,
-    equipment_id: booking.equipmentId || 'general-consultation',
-    equipment_name: booking.equipmentName || 'Tư vấn tổng hợp thiết bị gym',
-    booking_type: booking.bookingType || 'try-showroom',
-    preferred_date: booking.preferredDate || null,
-    preferred_location: booking.preferredLocation || 'Showroom Cầu Giấy',
-    note: booking.note || null,
-    user_role: booking.userRole || 'user'
-  }).select('id').single();
-
-  if (error) {
-    console.error('Error in submitBooking direct insert:', error);
-    return { success: false, error: error.message };
-  }
-
-  // Tạo thông báo lịch hẹn
-  try {
-    createNotification({
-      userId: 'current_user',
-      actorId: 'system',
-      actorName: 'Hệ thống Showroom',
-      type: 'booking',
-      title: 'Đặt lịch Showroom thành công 📅',
-      content: `Lịch trải nghiệm ${booking.equipmentName || 'máy Gym'} tại ${booking.preferredLocation || 'Showroom'} đã được ghi nhận. Chuyên viên sẽ sớm liên hệ xác nhận.`,
-      targetId: data?.id || bookingId,
-    });
-  } catch (_) {}
-
-  return { success: true, id: data?.id || bookingId };
 }
 
 // ── CẬP NHẬT TRẠNG THÁI BOOKING ─────────────────────────────────────────────
@@ -480,29 +443,30 @@ export async function fetchEquipments(): Promise<Equipment[]> {
       slug: d.slug || d.id,
       brand: d.brand,
       brandLogo: d.brand_logo || undefined,
+      sourceUrl: d.source_url || undefined,
       category: d.category,
       type: d.type || 'commercial',
       modelNumber: d.model_number || '',
       priceRange: d.price_range || '',
       vipPrice: d.vip_price || undefined,
       estimatedPrice: Number(d.estimated_price) || 0,
-      rating: Number(d.rating) || 4.9,
+      rating: Number(d.rating) || 0,
       reviewCount: Number(d.review_count) || 0,
       thumbnail: d.thumbnail || '',
       gallery: Array.isArray(d.gallery) && d.gallery.length > 0 ? d.gallery : [d.thumbnail].filter(Boolean),
       excerpt: d.excerpt || '',
       fullDescription: d.full_description || d.excerpt || '',
       specifications: typeof d.specifications === 'object' && d.specifications !== null ? d.specifications : {
-        weightCapacity: '200 kg',
-        dimensions: '2000 x 1000 x 1500 mm',
-        machineWeight: '150 kg',
-        warranty: '5 năm'
+        weightCapacity: '',
+        dimensions: '',
+        machineWeight: '',
+        warranty: ''
       },
       pros: Array.isArray(d.pros) ? d.pros : [],
       cons: Array.isArray(d.cons) ? d.cons : [],
       isFeatured: Boolean(d.is_featured),
-      availableForBooking: d.available_for_booking ?? true,
-      showroomLocations: Array.isArray(d.showroom_locations) ? d.showroom_locations : ['Showroom Hà Nội', 'Showroom TP.HCM']
+      availableForBooking: d.available_for_booking ?? false,
+      showroomLocations: Array.isArray(d.showroom_locations) ? d.showroom_locations : []
     }));
   } catch (err) {
     console.error('fetchEquipments exception:', err);
@@ -2775,4 +2739,3 @@ export async function deleteUserPR(prId: string): Promise<boolean> {
   // TODO: await supabase.from('user_prs').delete().eq('id', prId);
   return true;
 }
-

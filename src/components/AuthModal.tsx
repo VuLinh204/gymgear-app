@@ -93,7 +93,6 @@ export const AuthModal: React.FC = () => {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md animate-fadeIn"
-      onClick={(e) => { if (e.target === e.currentTarget) closeAuthModal(); }}
     >
       <div className="relative w-full max-w-md bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://htwsrvixpvauhhngxzso.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export async function POST(request: Request) {
   try {
@@ -14,29 +14,34 @@ export async function POST(request: Request) {
       equipmentId, 
       equipmentName, 
       bookingType, 
-      preferredDate, 
+      preferredDate,
+      preferredTime,
       preferredLocation, 
       note, 
       userRole 
     } = body;
 
-    if (!customerName || !customerPhone) {
+    if (!customerName || !customerPhone || !preferredDate || !preferredTime) {
       return NextResponse.json(
-        { success: false, error: 'Họ tên và Số điện thoại là bắt buộc.' },
+        { success: false, error: 'Họ tên, số điện thoại, ngày và giờ hẹn là bắt buộc.' },
         { status: 400 }
       );
     }
 
-    // Đăng nhập quyền quản trị hệ thống để ghi nhận booking vào Supabase an toàn
-    const sb = createClient(supabaseUrl, supabaseAnonKey);
-    const { error: authErr } = await sb.auth.signInWithPassword({
-      email: 'khanh@gymgear.vn',
-      password: 'password123'
-    });
-
-    if (authErr) {
-      console.error('Lỗi xác thực hệ thống khi tạo booking:', authErr);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(preferredDate) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(preferredTime)) {
+      return NextResponse.json({ success: false, error: 'Ngày hoặc giờ hẹn không hợp lệ.' }, { status: 400 });
     }
+    const bookingDate = new Date(`${preferredDate}T${preferredTime}:00`);
+    if (Number.isNaN(bookingDate.getTime()) || bookingDate.getTime() < Date.now()) {
+      return NextResponse.json({ success: false, error: 'Vui lòng chọn thời gian trong tương lai.' }, { status: 400 });
+    }
+
+    if (!supabaseServiceRoleKey) {
+      return NextResponse.json({ success: false, error: 'Booking chưa được cấu hình an toàn trên máy chủ.' }, { status: 503 });
+    }
+    const sb = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
 
     const bookingId = `BK-${Math.floor(10000 + Math.random() * 90000)}`;
 
@@ -51,6 +56,7 @@ export async function POST(request: Request) {
         equipment_name: equipmentName || 'Tư vấn tổng hợp thiết bị gym',
         booking_type: bookingType || 'try-showroom',
         preferred_date: preferredDate || null,
+        preferred_time: preferredTime,
         preferred_location: preferredLocation || 'Showroom Cầu Giấy',
         note: note || null,
         status: 'pending',
@@ -82,8 +88,9 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, booking: data, id: data.id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Exception tại /api/booking:', err);
-    return NextResponse.json({ success: false, error: err.message || 'Lỗi server' }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Lỗi server';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

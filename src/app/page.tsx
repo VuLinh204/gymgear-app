@@ -495,6 +495,10 @@ function AppLayout() {
 
       {/* Direct Gym Chat Widget */}
       <ChatWidget
+        onOpenBooking={() => {
+          setBookingEquipment(null);
+          setBookingModalOpen(true);
+        }}
         onOpenEquipmentDetail={(id) => {
           const eq = equipments.find((e: Equipment) => e.id === id);
           if (eq) setSelectedEquipment(eq);
