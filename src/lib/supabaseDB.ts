@@ -84,6 +84,7 @@ export async function fetchPosts(currentUserId?: string) {
 
   return (postsRes.data || []).map((post: any) => ({
     ...post,
+    isPinned: Boolean(post.is_pinned),
     taggedEquipment: equipments.find((eq: any) => eq.id === post.equipment_id) || null,
     likesCount: likeCountMap[post.id] || 0,
     commentsCount: commentCountMap[post.id] || 0,
@@ -875,6 +876,7 @@ export async function fetchUserPosts(userId: string) {
 
   return (postsRes.data || []).map((post: any) => ({
     ...post,
+    isPinned: Boolean(post.is_pinned),
     author: {
       id: post.author.id,
       name: post.author.name,
